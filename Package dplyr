@@ -1,0 +1,66 @@
+### Package dplyr
+
+rm(list = ls())
+attach(iris)
+library(dplyr)
+library(ggplot2)
+
+select(iris,Sepal.Length)
+select(iris,sepala=Sepal.Length)
+rename(iris,sepala=Sepal.Length)
+
+mutate(iris,nova=Petal.Length - Petal.Width)
+transmute(iris,Petal.Length,Petal.Width,Petal.Length - Petal.Width)
+
+teste<-group_by(iris,Species)
+summarise(teste,sum(Sepal.Length))
+summarise(teste,Sepal.Length=n())
+
+a<-4
+select(iris,5)
+vars<-c("Petal.Width")
+select(iris,vars)
+
+sample_n(iris,3)
+sample_frac(iris,0.1)
+
+a <- group_by(iris,Species)
+b <- summarise(a, tamanho_sample = n(),med_sep_comp=mean(Sepal.Length),med_sep_larg=mean(Sepal.Width))  
+c <- filter(b,med_sep_larg > 2.8)
+
+attach(b)
+ggplot(b,aes(med_sep_comp,med_sep_larg))+
+  geom_point(aes(size=tamanho_sample))+
+  geom_smooth()
+
+b
+n_distinct(b)
+first(b)
+last(b)
+nth(b,4)
+
+options(dplyr.width = Inf) #para mostrar todas as colunas 
+mutate(b,"teste",2,med_sep_comp + 10)
+
+seq(1,nrow(b))
+seq(1,3)
+mutate(b,"teste",2,med_sep_comp + 10,sequencia=seq(1,nrow(b)))
+
+base <- iris
+base_2 <- group_by(base,cut_ = cut(iris$Sepal.Length,3)) #cut_ dividiu Sepal.len em 3 partes 
+summary(base_2$cut_)
+
+base <- select(base,-(Species))
+base <- round(base,digits = 0)
+arrange(base,desc(Sepal.Length))
+
+base <- iris
+filter(base,Sepal.Length > 5 & Sepal.Width > 3) # | significa ou 
+
+base_tes_pip = iris
+a <- filter(base_tes_pip,Sepal.Length > 5)
+b <- filter(a, Sepal.Width > 3)
+c <- select(b, -Species)
+
+base_tes_pip = iris %>% filter(Sepal.Length > 5) %>% filter(Sepal.Width > 3) %>% select(-Species)
+base_tes_pip
