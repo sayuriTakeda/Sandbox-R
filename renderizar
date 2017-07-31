@@ -1,0 +1,10 @@
+library(glue)
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+source("pacotes//pacotes.R")
+
+# gerar arquivos csv e html
+rmarkdown::render(input = "output/Analise_mm.Rmd",
+                  output_format = "html_document",
+                  output_file = glue("output/{dat}/analise_pos_mm.html"))
