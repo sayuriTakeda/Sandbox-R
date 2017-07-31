@@ -14,21 +14,43 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r, message=FALSE, warning=FALSE}
+rm(list = ls())
 library(dplyr)
 library(ggplot2)
 library(DT)
+library(magrittr)
+library(highcharter)
+library(glue)
+source("/home/casaevideo/minhas_funcoes.R")
+library(plotly)
 ```
+
+```{r}
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+dat <- "s30" #tirar depois
+
+comparacao_plan_mm <- read.csv2(glue("{dat}/comparacao_plan_mm.csv"))
+
+comparacao_regressao_planejado <- read.csv2(glue("{dat}/comparacao_regressao_planejado.csv"))
+
+matriz_regras_sku <- read.csv2(glue("{dat}/matriz_regras_sku.csv"))
+
+planejamento_peca_restricao <- read.csv2(glue("{dat}/planejamento_peca_restricao.csv"))
+
+tabela_analise <- read.csv2(glue("{dat}/tabela_analise.csv"))
+
+```
+
+
 ### Comp_plan_mm
 
 Mostra as 30 maiores diferenças (valor absoluto) entre planejado e máquina de moer
 
 -------------------
 
-```{r}
-rm(list = ls())
-
-comparacao_plan_mm <-read.csv2("/home/sayuritakeda/analise_mm/comparacao_plan_mm.csv")
-
+```{r, message=FALSE, warning=FALSE}
 nova_base <- transmute(comparacao_plan_mm, SKU = COD_SKU, NOM_SKU, NEG, dif = abs(QTD_PLANEJADO-QTD_MM))
 
 tab <- nova_base %>% 
@@ -49,6 +71,20 @@ datatable(base_ordenada, options = list(
     backgroundRepeat = 'no-repeat',
     backgroundPosition = 'center'
   ) 
+
+base_grafico <- comparacao_plan_mm %>% 
+  group_by(COD_SKU, LISTA) %>% 
+  summarise(MEDIA_QTD_PLANEJADO = mean(QTD_PLANEJADO), MEDIA_QTD_MM = mean(QTD_MM))
+
+base_grafico <- base_grafico %>% filter(LISTA != "NA", MEDIA_QTD_PLANEJADO != MEDIA_QTD_MM)
+
+x2<- max(c(base_grafico$MEDIA_QTD_PLANEJADO,base_grafico$MEDIA_QTD_MM))
+P <- ggplot(base_grafico,aes(MEDIA_QTD_PLANEJADO,MEDIA_QTD_MM)) + 
+  geom_point(aes(colour = factor(LISTA)), show.legend = T, size = 2) + 
+  labs(x = "MEDIA QTD PLANEJADO",y = "MEDIA QTD MM",
+       title = "Comparação planejado mm", colour = "Lista") +
+  geom_segment(aes(x = 0, y = 0, xend = x2, yend = x2), colour = "#737373", size = 0.3)
+ggplotly(P, height = 600, width = 640)
 ```
 
 ### Comp_regressao_planejado
@@ -59,22 +95,23 @@ Mostra as 30 maiores diferenças (valor absoluto) entre regressão e plan (PREV_
 ---------------------
 
 ```{r, message=FALSE, warning=FALSE}
-rm(list = ls())
+comparacao_regressao_planejado_m <- comparacao_regressao_planejado %>% 
+  mutate(dif = abs(PREV_STK_SEM_EVENTO-PLAN_PECAS))
 
-comparacao_plan_mm <- read.csv2("/home/sayuritakeda/analise_mm/comparacao_plan_mm.csv")
-comparacao_regressao_planejado <- read.csv2("/home/sayuritakeda/analise_mm/comparacao_regressao_planejado.csv")
-
-comparacao_regressao_planejado <- comparacao_regressao_planejado %>% mutate(dif = abs(PREV_STK_SEM_EVENTO-PLAN_PECAS))
-
-B <- comparacao_regressao_planejado %>% 
+B <- comparacao_regressao_planejado_m %>% 
   group_by(SKU) %>%
   summarise(dif = sum(dif)) %>%
   arrange(desc(dif)) %>% 
   slice(1:30)
 
 # Cria tabela com NOM_SKU e neg
-A <- comparacao_plan_mm %>% select(SKU = COD_SKU, NOM_SKU, NEG) %>% unique
-tabela_completa <- inner_join(A,B) %>% arrange(desc(dif))
+A <- comparacao_plan_mm %>% 
+  select(SKU = COD_SKU, NOM_SKU, NEG) %>% 
+  unique
+
+tabela_completa <- inner_join(A,B) %>% 
+  arrange(desc(dif))
+
 datatable(tabela_completa, options = list(
   initComplete = JS(
     "function(settings, json) {",
@@ -92,14 +129,14 @@ datatable(tabela_completa, options = list(
 
 .
 
-```{r}
+```{r, fig.width=9}
 # Gráfico para saber quais as categ que mais possuem dif entre PREV_STK_SEM_EVENTO X PLAN_PECAS
 tabela_completa$NOM_SKU <- factor(tabela_completa$NOM_SKU, 
                                   levels = tabela_completa$NOM_SKU[order(tabela_completa$dif)])
 #tabela_completa$NOM_SKU
 P <- ggplot(tabela_completa,aes(dif,factor(NOM_SKU)))
 P + geom_point(colour = "#47476b", show.legend = F, size = 2) + 
-  labs(x = "Diferença",y = "SKU")
+    labs(x = "Diferença",y = "SKU")
 ```
 
 Comparação do desvio entre as regressões (PREV_SEM_STK | PREV_COM_STK | PREV_STK_EVENTO | PREV_STK_SEM_EVENTO)
@@ -108,11 +145,6 @@ Comparação do desvio entre as regressões (PREV_SEM_STK | PREV_COM_STK | PREV_
 
 
 ```{r, message=FALSE, warning=FALSE}
-rm(list = ls())
-
-comparacao_regressao_planejado <- read.csv2("/home/sayuritakeda/analise_mm/comparacao_regressao_planejado.csv")
-comparacao_plan_mm <- read.csv2("/home/sayuritakeda/analise_mm/comparacao_plan_mm.csv")
-
 matriz <- comparacao_regressao_planejado[,4:7]
 
 comparacao_regressao_planejado$DESVIO <- apply(matriz, 1, sd)
@@ -122,9 +154,15 @@ tabela_desv <- comparacao_regressao_planejado %>%
   summarise(DESVIO_MEDIO = mean(DESVIO)) %>%
   top_n(30, DESVIO_MEDIO)
 
-A <- comparacao_plan_mm %>% select(SKU = COD_SKU, NOM_SKU,NEG) %>% unique
-tabela_completa <- inner_join(A,tabela_desv) %>% arrange(desc(DESVIO_MEDIO))
+A <- comparacao_plan_mm %>% 
+  select(SKU = COD_SKU, NOM_SKU,NEG) %>% 
+  unique
+
+tabela_completa <- inner_join(A,tabela_desv) %>% 
+  arrange(desc(DESVIO_MEDIO))
+
 tabela_completa$DESVIO_MEDIO <- round(tabela_completa$DESVIO_MEDIO,2)
+
 datatable(tabela_completa, options = list(
   initComplete = JS(
     "function(settings, json) {",
@@ -140,10 +178,6 @@ Quantos SKU tem modelo categoria e modelo negocio
 -------------------
 
 ```{r}
-rm(list = ls())
-
-matriz_regras_sku <- read.csv2("/home/sayuritakeda/analise_mm/matriz_regras_sku.csv")
-
 matriz_regras_modelo <- matriz_regras_sku %>% 
   group_by(VISAO_MODELO) %>% 
   summarise(SKU=n())
@@ -157,17 +191,12 @@ datatable(matriz_regras_modelo, options = list(
 ```
 .
 
-.
 
 Quem passou pela regra ou não
 
 ------------------
                                                                                      
 ```{r}
-rm(list = ls())
-
-matriz_regras_sku <- read.csv2("/home/sayuritakeda/analise_mm/matriz_regras_sku.csv")
-
 matriz_regras <- matriz_regras_sku %>% 
   select(SKU, CLASSE_I_MENOR, IDADE_20, PV_MUDOU, CORREL_MENOR)
 
@@ -185,13 +214,15 @@ Contagem em cada restrição
 
 ----------------
 
-```{r}
-rm(list = ls())
+```{r, message=FALSE, warning=FALSE}
+planejamento_peca_restricao_mod <- planejamento_peca_restricao %>% 
+  filter(ANO != 2018)
 
-planejamento_peca_restricao <- read.csv2("/home/sayuritakeda/analise_mm/planejamento_peca_restricao.csv")
-
-planejamento_pecas <- planejamento_peca_restricao %>% group_by(RESTRICAO) %>% summarise(QTD = n()) %>% arrange(desc(QTD))
-
+planejamento_pecas <- planejamento_peca_restricao_mod %>% 
+  group_by(SEMANA, RESTRICAO) %>% 
+  summarise(QTD = n()) %>% 
+  arrange(SEMANA, desc(QTD))  
+  
 datatable(planejamento_pecas, options = list(
   initComplete = JS(
     "function(settings, json) {",
@@ -205,6 +236,40 @@ datatable(planejamento_pecas, options = list(
     backgroundRepeat = 'no-repeat',
     backgroundPosition = 'center'
   ) 
+
+planejamento_peca_filter_login <- planejamento_pecas %>% 
+  filter(RESTRICAO == "LOGIN") #para montar gráficos 
+
+planejamento_peca_filter_aposta <- planejamento_pecas %>% 
+  filter(RESTRICAO == "APOSTA") #para montar gráficos 
+
+planejamento_peca_filter_CLASSE_I_NOVO <- planejamento_pecas %>% 
+  filter(RESTRICAO == "CLASSE_I_NOVO") #para montar gráficos 
+
+
+highchart() %>% 
+  hc_title(text = "RESTRICAO LOGIN") %>% 
+  hc_add_series_scatter(planejamento_peca_filter_login$SEMANA, planejamento_peca_filter_login$QTD) %>% 
+  hc_xAxis(title = list(text = "Semana")) %>% 
+  hc_yAxis(title = list(text = "QTD")) %>% 
+  hc_yAxis(max = 4000, min = 1000) %>% 
+  hc_tooltip(pointFormat = "semana: {point.x} <br> QTD: {point.y}")
+
+highchart() %>% 
+  hc_title(text = "RESTRICAO APOSTA") %>% 
+  hc_add_series_scatter(planejamento_peca_filter_aposta$SEMANA, planejamento_peca_filter_aposta$QTD) %>% 
+  hc_xAxis(title = list(text = "Semana")) %>% 
+  hc_yAxis(title = list(text = "QTD")) %>% 
+  hc_yAxis(max = 5000) %>% 
+  hc_tooltip(pointFormat = "semana: {point.x} <br> QTD: {point.y}")
+
+highchart() %>% 
+  hc_title(text = "RESTRICAO CLASSE I NOVO") %>% 
+  hc_add_series_scatter(as.integer(planejamento_peca_filter_CLASSE_I_NOVO$SEMANA), planejamento_peca_filter_CLASSE_I_NOVO$QTD) %>% 
+  hc_xAxis(title = list(text = "Semana")) %>% 
+  hc_yAxis(title = list(text = "QTD")) %>% 
+  hc_tooltip(pointFormat = "semana: {point.x} <br> QTD: {point.y}")
+
 ```
 
 ### Tabela_analise
@@ -214,19 +279,12 @@ Quantidade de produtos em cada semana para cada lista
 --------------------
 
 ```{r, message=FALSE, warning=FALSE}
-
-rm(list = ls())
-
 ################# comparacao_tabela_analise ################# 
-
-rm(list = ls())
 
 #quantidade de produtos em cada lista para cada semana 
 
-tabela_analise <- read.csv2("/home/sayuritakeda/analise_mm/tabela_analise.csv")
-tabela_analise <- tabela_analise %>% select(SEMANA, LISTA, SKU)
-
 tabela_analise_pronta <- tabela_analise %>% 
+  select(SEMANA, LISTA, SKU) %>%  
   group_by(SEMANA,LISTA) %>% 
   summarise(NUM_SKUS = n()) %>%  
   filter(SEMANA > 30)
@@ -265,37 +323,33 @@ P + geom_point(colour = "#0088cc", show.legend = T, size = 2) +
 ```
 
 
+
 Quantidade de sku na semana que tiveram limitação de estoque 
 
 --------------------
 
 ```{r, message=FALSE, warning=FALSE, plotly=TRUE}
-rm(list = ls())
-
-tabela_analise <- read.csv2("/home/sayuritakeda/analise_mm/tabela_analise.csv")
-
-tabela_analise <- tabela_analise %>% 
-  select(SEMANA, POSSUI_LIM_ETQ) %>% 
+tabela_analise_mod <- tabela_analise %>% 
   group_by(SEMANA) %>% 
   summarise(POSSUI_LIM_ETQ = sum(POSSUI_LIM_ETQ))
 
-tabela_analise <- tabela_analise %>% filter(POSSUI_LIM_ETQ != 0)
+tabela_analise_mod <- tabela_analise_mod %>% 
+  filter(POSSUI_LIM_ETQ != 0)
 
-datatable(tabela_analise , options = list(
+datatable(tabela_analise_mod , options = list(
   initComplete = JS(
     "function(settings, json) {",
     "$(this.api().table().header()).css({'background-color': '#003366', 'color': '#fff'});",
     "}")
 ))
 
-library(magrittr)
-library(highcharter)
+
 highchart() %>% 
-hc_title(text = "Qtd de sku na semana que tiveram limitação de estoque") %>% 
-hc_add_series_scatter(tabela_analise$SEMANA, tabela_analise$POSSUI_LIM_ETQ) %>% 
-hc_xAxis(title = list(text = "Semana")) %>% 
-hc_yAxis(title = list(text = "QTD_LIM_ETQ"))
+  hc_title(text = "Qtd de sku na semana que tiveram limitação de estoque") %>% 
+  hc_add_series_scatter(tabela_analise_mod$SEMANA, tabela_analise_mod$POSSUI_LIM_ETQ) %>% 
+  hc_xAxis(title = list(text = "Semana")) %>% 
+  hc_yAxis(title = list(text = "QTD_LIM_ETQ")) %>% 
+  hc_tooltip(pointFormat = "semana: {point.x} <br> LIM_ETQ: {point.y}")
 
 
 ```
-
