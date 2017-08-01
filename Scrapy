@@ -1,0 +1,23 @@
+library("rvest")
+
+weather <- read_html("---------------")
+
+weather %>% 
+  html_nodes("td") %>% 
+  html_nodes("div") %>%
+  html_children()
+
+
+weather %>% 
+  html_nodes("td") %>% 
+  html_nodes("div") %>% 
+  html_nodes("h3") 
+
+
+weather %>% 
+  html_nodes("td") %>% 
+  html_nodes("div") %>% 
+  html_node(".large-temp") %>% 
+  html_text() %>% 
+  .[!is.na(.)]
+
