@@ -1,0 +1,59 @@
+remove(list = ls())
+library(shiny)
+library(dplyr)
+library(shinythemes)
+library(magrittr)
+base <- iris 
+mutate(base,feito = "n")
+
+shinyApp(
+  ui = tagList(
+    #shinythemes::themeSelector(),
+    navbarPage(
+      theme = shinytheme("flatly"),
+      "Analistas",
+      tabPanel("Clecio",
+               sidebarPanel(
+                 
+                 textInput("sku", "SKU:", "digite o n° do sku"),
+                 
+                 h5("Insira o SKU OK:"),
+                submitButton("Inserir"),
+                 
+                 h5("Desmarcar o produto:"),
+                submitButton("Desmarcar")
+                 
+               ),
+               mainPanel(
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            dataTableOutput("table")
+                            
+                   ),
+                   tabPanel("OK", 
+                            "This panel is intentionally left blank",
+                            dataTableOutput("table_ok")
+                            
+                   ),
+                   tabPanel("FALTA", "This panel is intentionally left blank")
+                 )
+               )
+      ),
+      tabPanel("Daniel", "This panel is intentionally left blank"),
+      tabPanel("Pablo", "This panel is intentionally left blank")
+    )
+  ),
+  server = function(input, output) {
+    
+    output$table <- renderDataTable({
+      base
+    })
+    
+    #pegar a linha do sku digitado e marcar / colocar em ok
+    output$table_ok <- renderDataTable({
+      filter(base, base$Sepal.Length == input$sku)
+    })  
+    
+  }
+)
