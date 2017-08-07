@@ -71,7 +71,14 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
     if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
     
     })
+    
+    output$table_ok = renderDataTable(
+      filter(base, base$feito == "ok" | base$feito == "OK")
+    )
+    
+    output$table_falta = renderDataTable(
+      filter(base, base$feito != "ok" & base$feito != "OK")
+    )
  }
  
  shinyApp(ui, server)
-    
