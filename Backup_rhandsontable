@@ -13,10 +13,11 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
       "Analistas",
       tabPanel("Clecio",
                sidebarPanel(
-                 
-                 actionButton("saveBtn", "Save"),
+                
+                 actionButton("saveBtn", "save", icon("paper-plane"), 
+                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
                  width = 2
-                 
+
                ),
                mainPanel(
                  tabsetPanel(
@@ -64,7 +65,11 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
       }
       
       rhandsontable(DF) %>%
-        hot_table(highlightCol = TRUE, highlightRow = TRUE)
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.TextCell.renderer.apply(this, arguments);
+    if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
+    
     })
  }
  
