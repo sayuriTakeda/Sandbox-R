@@ -1,0 +1,72 @@
+remove(list = ls())
+library(shiny)
+library(dplyr)
+library(shinythemes)
+library(magrittr)
+library(rhandsontable)
+base <- read_csv2("/home/sayuritakeda/base.csv") 
+#base <- mutate(base,Feito = "n")
+
+  ui <- tagList(
+    navbarPage(
+      theme = shinytheme("flatly"),
+      "Analistas",
+      tabPanel("Clecio",
+               sidebarPanel(
+                 
+                 actionButton("saveBtn", "Save"),
+                 width = 2
+                 
+               ),
+               mainPanel(
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("hot")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            dataTableOutput("table_ok")
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            dataTableOutput("table_falta"))
+                 )
+               )
+      ),
+      tabPanel("Daniel", "This panel is intentionally left blank"),
+      tabPanel("Pablo", "This panel is intentionally left blank")
+    )
+  )
+  
+ server <- function(input, output) {
+    
+    fname = tempfile(fileext = ".csv")
+    
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn
+      hot = isolate(input$hot)
+      if (!is.null(hot)) {
+        write.csv2(hot_to_r(input$hot), "/home/sayuritakeda/base.csv", row.names = FALSE)
+        print("/home/sayuritakeda/base.csv")
+      }
+    })
+    
+    output$hot = renderRHandsontable({
+      if (!is.null(input$hot)) {
+        DF = hot_to_r(input$hot)
+      } else {
+        DF = read.csv2("base.csv", stringsAsFactors = FALSE)
+      }
+      
+      rhandsontable(DF) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE)
+    })
+ }
+ 
+ shinyApp(ui, server)
+    
