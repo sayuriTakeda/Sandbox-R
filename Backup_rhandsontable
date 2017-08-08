@@ -1,25 +1,40 @@
 remove(list = ls())
+
+library(DT)
+library(RSQLServer)
 library(shiny)
 library(dplyr)
 library(shinythemes)
 library(magrittr)
 library(rhandsontable)
-base <- read_csv2("/home/sayuritakeda/base.csv") 
-#base <- mutate(base,Feito = "n")
+
+base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o arquivo Gera_base.R
+                                                      # só tem 1 pessoa  
 
   ui <- tagList(
     navbarPage(
-      theme = shinytheme("flatly"),
+      theme = shinytheme("flatly"), # tema de cores 
       "Analistas",
-      tabPanel("Clecio",
+      tabPanel("Clecio", 
                sidebarPanel(
                 
-                 actionButton("saveBtn", "save", icon("paper-plane"), 
-                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
-                 width = 2
+                 actionButton("saveBtn", "save", icon("save"), 
+                      style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                   width = 2),
+                 
+               sidebarPanel(
+                  
+                 radioButtons("order","Escolha uma ordenação:", choiceNames = list("Venda", "Plan"),
+                              choiceValues = list("rank_venda","rank_plan")),
+                 textOutput("txt")
 
                ),
+               
+               
                mainPanel(
+                 
+                 width = 10,
+                 
                  tabsetPanel(
                    tabPanel("TUDO",
                             h4("Table"),
@@ -28,12 +43,13 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
                    ),
                    tabPanel("OK", 
                             h4("Table"),
-                            dataTableOutput("table_ok")
+                            div(dataTableOutput("table_ok"), style = "font-size:70%")
+                            
                             
                    ),
                    tabPanel("FALTA", 
                             h4("Table"),
-                            dataTableOutput("table_falta"))
+                            div(dataTableOutput("table_falta"), style = "font-size:70%"))
                  )
                )
       ),
@@ -43,6 +59,10 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
   )
   
  server <- function(input, output) {
+   
+   output$txt <- renderText({
+     paste("You chose", input$order)
+   })
     
     fname = tempfile(fileext = ".csv")
     
@@ -52,8 +72,8 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
       input$saveBtn
       hot = isolate(input$hot)
       if (!is.null(hot)) {
-        write.csv2(hot_to_r(input$hot), "/home/sayuritakeda/base.csv", row.names = FALSE)
-        print("/home/sayuritakeda/base.csv")
+        write.csv(hot_to_r(input$hot), "/home/sayuritakeda/base_teste.csv", row.names = FALSE)
+        print("/home/sayuritakeda/base_teste.csv")
       }
     })
     
@@ -61,24 +81,30 @@ base <- read_csv2("/home/sayuritakeda/base.csv")
       if (!is.null(input$hot)) {
         DF = hot_to_r(input$hot)
       } else {
-        DF = read.csv2("base.csv", stringsAsFactors = FALSE)
+        DF = read.csv("base_teste.csv", stringsAsFactors = FALSE) %>% arrange(desc(rank_venda)) # tem que botar o input$order mas tirar as aspas 
       }
-      
+
       rhandsontable(DF) %>%
         hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
         hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.TextCell.renderer.apply(this, arguments);
     if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
-    
+      
+      
+
+      
+      
     })
     
-    output$table_ok = renderDataTable(
-      filter(base, base$feito == "ok" | base$feito == "OK")
-    )
+    output$table_ok = renderDataTable({
+      filter(base, Feito == "ok" | Feito == "OK")
+      })
+  
     
     output$table_falta = renderDataTable(
-      filter(base, base$feito != "ok" & base$feito != "OK")
+      filter(base, Feito != "ok" & Feito != "OK")
     )
  }
  
  shinyApp(ui, server)
+    
