@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r, message=FALSE, warning=FALSE}
-rm(list = ls())
+library(RODBC)
 library(dplyr)
 library(ggplot2)
 library(DT)
@@ -23,13 +23,14 @@ library(highcharter)
 library(glue)
 source("/home/casaevideo/minhas_funcoes.R")
 library(plotly)
+library(tidyverse)
+source("/home/casaevideo/minhas_funcoes.R")
 ```
 
 ```{r}
 sem <- semana_atual(FALSE)
-dat <- glue("s{sem}")
-
-dat <- "s30" #tirar depois
+#dat <- glue("s{sem}")
+dat <- "s31"
 
 comparacao_plan_mm <- read.csv2(glue("{dat}/comparacao_plan_mm.csv"))
 
@@ -41,12 +42,18 @@ planejamento_peca_restricao <- read.csv2(glue("{dat}/planejamento_peca_restricao
 
 tabela_analise <- read.csv2(glue("{dat}/tabela_analise.csv"))
 
+df_i <- readRDS("../trabalho/6_01.planejado_classe_i.Rda")
+
+df_plan <- readRDS("../trabalho/1_03.planejamento_df.Rda")
+
+df_sku <- readRDS("../trabalho/1_01.sku_df.Rda")
+
 ```
 
 
-### Comp_plan_mm
+### Comparação Plan X MM
 
-Mostra as 30 maiores diferenças (valor absoluto) entre planejado e máquina de moer
+<em>Mostra as 30 maiores diferenças (valor absoluto) entre planejado e máquina de moer
 
 -------------------
 
@@ -74,28 +81,33 @@ datatable(base_ordenada, options = list(
 
 base_grafico <- comparacao_plan_mm %>% 
   group_by(COD_SKU, LISTA) %>% 
-  summarise(MEDIA_QTD_PLANEJADO = mean(QTD_PLANEJADO), MEDIA_QTD_MM = mean(QTD_MM))
+  summarise(MEDIA_QTD_PLANEJADO = as.integer(mean(QTD_PLANEJADO)), 
+            MEDIA_QTD_MM = as.integer(mean(QTD_MM))) 
 
 base_grafico <- base_grafico %>% filter(LISTA != "NA", MEDIA_QTD_PLANEJADO != MEDIA_QTD_MM)
 
 x2<- max(c(base_grafico$MEDIA_QTD_PLANEJADO,base_grafico$MEDIA_QTD_MM))
+
 P <- ggplot(base_grafico,aes(MEDIA_QTD_PLANEJADO,MEDIA_QTD_MM)) + 
   geom_point(aes(colour = factor(LISTA)), show.legend = T, size = 2) + 
-  labs(x = "MEDIA QTD PLANEJADO",y = "MEDIA QTD MM",
-       title = "Comparação planejado mm", colour = "Lista") +
+  labs(x = "MEDIA QTD PLANEJADO",
+       y = "MEDIA QTD MM",
+       title = "Comparação planejado mm", 
+       colour = "Lista") +
   geom_segment(aes(x = 0, y = 0, xend = x2, yend = x2), colour = "#737373", size = 0.3)
 ggplotly(P, height = 600, width = 640)
 ```
 
-### Comp_regressao_planejado
+### Comparação Regressão Planejado
 
 
-Mostra as 30 maiores diferenças (valor absoluto) entre regressão e plan (PREV_STK_SEM_EVENTO X PLAN_PECAS)
+<em>Mostra as 30 maiores diferenças (valor absoluto) entre regressão e plan (PREV_STK_SEM_EVENTO X PLAN_PECAS)
 
 ---------------------
 
 ```{r, message=FALSE, warning=FALSE}
 comparacao_regressao_planejado_m <- comparacao_regressao_planejado %>% 
+  filter(ANO != 2018) %>% 
   mutate(dif = abs(PREV_STK_SEM_EVENTO-PLAN_PECAS))
 
 B <- comparacao_regressao_planejado_m %>% 
@@ -126,10 +138,8 @@ datatable(tabela_completa, options = list(
     backgroundPosition = 'center'
   ) 
 ```
-
-.
-
-```{r, fig.width=9}
+<br>
+```{r, fig.width=8}
 # Gráfico para saber quais as categ que mais possuem dif entre PREV_STK_SEM_EVENTO X PLAN_PECAS
 tabela_completa$NOM_SKU <- factor(tabela_completa$NOM_SKU, 
                                   levels = tabela_completa$NOM_SKU[order(tabela_completa$dif)])
@@ -138,8 +148,9 @@ P <- ggplot(tabela_completa,aes(dif,factor(NOM_SKU)))
 P + geom_point(colour = "#47476b", show.legend = F, size = 2) + 
     labs(x = "Diferença",y = "SKU")
 ```
-
-Comparação do desvio entre as regressões (PREV_SEM_STK | PREV_COM_STK | PREV_STK_EVENTO | PREV_STK_SEM_EVENTO)
+<br>
+<br>
+<em>Comparação do desvio entre as regressões (PREV_SEM_STK | PREV_COM_STK | PREV_STK_EVENTO | PREV_STK_SEM_EVENTO)
 
 ------------------------
 
@@ -171,9 +182,9 @@ datatable(tabela_completa, options = list(
 ))
 ```
 
-### Matriz_regras_sku
+### Matriz Regras Sku
 
-Quantos SKU tem modelo categoria e modelo negocio
+<em>Quantos SKU tem modelo categoria e modelo negocio
 
 -------------------
 
@@ -189,10 +200,9 @@ datatable(matriz_regras_modelo, options = list(
     "}")
 ))
 ```
-.
-
-
-Quem passou pela regra ou não
+<br>
+<br>
+<em>Quem passou pela regra ou não
 
 ------------------
                                                                                      
@@ -208,9 +218,9 @@ datatable(matriz_regras, options = list(
 ))
 ```
 
-### Plan_pecas_restricao
+### Planejamento Peça Restrição
 
-Contagem em cada restrição 
+<em>Contagem em cada restrição 
 
 ----------------
 
@@ -272,9 +282,9 @@ highchart() %>%
 
 ```
 
-### Tabela_analise
+### Tabela Análise
 
-Quantidade de produtos em cada semana para cada lista
+<em>Quantidade de produtos em cada semana para cada lista
 
 --------------------
 
@@ -321,10 +331,8 @@ P + geom_point(colour = "#0088cc", show.legend = T, size = 2) +
   ylim(7000, 8000)
 
 ```
-
-
-
-Quantidade de sku na semana que tiveram limitação de estoque 
+<br>
+<em>Quantidade de sku na semana que tiveram limitação de estoque 
 
 --------------------
 
@@ -350,6 +358,61 @@ highchart() %>%
   hc_xAxis(title = list(text = "Semana")) %>% 
   hc_yAxis(title = list(text = "QTD_LIM_ETQ")) %>% 
   hc_tooltip(pointFormat = "semana: {point.x} <br> LIM_ETQ: {point.y}")
+
+
+```
+
+### Regra classe I (lista4)
+
+```{r, message=FALSE, warning=FALSE}
+df_i %<>% left_join(
+  df_plan %>% select(ANO, SEMANA, SKU, PLAN_PECAS),
+  by = c("ANO", "SEMANA", "SKU")
+)
+
+df_i %<>% left_join(
+  df_sku %>% select(SKU, CAT, NEG, DESCRICAO),
+  by = "SKU"
+)
+
+df_i %<>% rename(QTD_REGRA = QTD, QTD_PLAN = PLAN_PECAS)
+df_i %<>% filter(ANO != 2018)
+
+df_i %<>% filter(!is.na(QTD_PLAN))
+
+db<- conectar_com_banco("plancom_a")
+base_analistas <- sqlQuery(db, "SELECT * FROM DBO_PLANCOM..TB_ANALISTAS_CATEGORIAS")
+
+base_analistas <- transmute(base_analistas, CAT = CATEGORIA, ANALISTA) 
+
+df_i %<>% left_join(
+  base_analistas %>% 
+    select(CAT, ANALISTA),
+    by = "CAT"
+)
+
+max.reta <- 1000
+
+# agrupar por sku e calcular basal antes e depois
+p <- df_i %>% 
+  filter(QTD_REGRA < max.reta) %>%  # filtrar fora anomalias
+  group_by(SKU, NEG, DESCRICAO, ANALISTA) %>% 
+  summarise(BASAL_REGRA = mean(QTD_REGRA),
+            BASAL_PLAN = mean(QTD_PLAN)) %>% 
+  ggplot(aes(x = BASAL_PLAN, y = BASAL_REGRA)) +
+    geom_point(aes(
+      text = paste0("Cód.: ", SKU, "\n",
+                    "Nome: ", DESCRICAO, "\n",
+                    "Negócio: ", NEG), colour = factor(ANALISTA))
+        ) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2) + # reta transversal
+    scale_x_continuous(breaks = seq(0, 300, 50)) +
+    scale_y_continuous(breaks = seq(0, 300, 50)) +
+    theme_bw() +
+    labs(colour = "Analista")
+
+
+ggplotly(p, tooltip = "text", height = 600, width = 640)
 
 
 ```
