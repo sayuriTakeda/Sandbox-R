@@ -1,11 +1,6 @@
 remove(list = ls())
 
 library(RSQLServer)
-library(shiny)
-library(dplyr)
-library(shinythemes)
-library(magrittr)
-library(rhandsontable)
 library(RODBC)
 source("/home/casaevideo/minhas_funcoes.R")
 
@@ -52,7 +47,7 @@ base <- sqlQuery(db, "SELECT
                  ")
 
 
-base <- base %>%
+base1 <- base %>%
   ungroup() %>% 
   filter(ANALISTA == "CLECIO") %>%
   arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
@@ -66,8 +61,61 @@ base <- base %>%
   mutate(rank_plan = row_number()) %>%
   filter(rank_venda <= 50 | rank_plan <= 20)
 
+base1 <- mutate(base1,Feito = "n")
+base1 <- base1 %>% select(Feito, everything())
 
-base <- mutate(base,Feito = "n")
-base <- base %>% select(Feito, everything())
+base1 <- mutate(base1, 
+                  VLR_VENDA_REAIS_3_SM = round(base1$VLR_VENDA_REAIS_3_SM,2),
+                  VAL_PLAN_SOMA_3_SEMANA = round(base1$VAL_PLAN_SOMA_3_SEMANA,2))
 
-write.csv(base, "base_teste_clecio.csv", row.names = F)
+write.csv(base1, "base_teste_clecio.csv", row.names = F)
+
+
+
+base2 <- base %>%
+  ungroup() %>% 
+  filter(ANALISTA == "PABLO") %>%
+  arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
+  mutate(
+    rank_venda = row_number(),
+    # excluir os planejados dos top 50 vendas
+    VAL_PLAN_SOMA_3_SEMANA = ifelse(rank_venda <= 50, NA,
+                                    VAL_PLAN_SOMA_3_SEMANA)
+  ) %>% 
+  arrange(desc(VAL_PLAN_SOMA_3_SEMANA)) %>% 
+  mutate(rank_plan = row_number()) %>%
+  filter(rank_venda <= 50 | rank_plan <= 20)
+
+base2 <- mutate(base2,Feito = "n")
+base2 <- base2 %>% select(Feito, everything())
+
+base2 <- mutate(base2, 
+                VLR_VENDA_REAIS_3_SM = round(base2$VLR_VENDA_REAIS_3_SM,2),
+                VAL_PLAN_SOMA_3_SEMANA = round(base2$VAL_PLAN_SOMA_3_SEMANA,2))
+
+write.csv(base2, "base_teste_pablo.csv", row.names = F)
+
+
+
+base3 <- base %>%
+  ungroup() %>% 
+  filter(ANALISTA == "DANIEL") %>%
+  arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
+  mutate(
+    rank_venda = row_number(),
+    # excluir os planejados dos top 50 vendas
+    VAL_PLAN_SOMA_3_SEMANA = ifelse(rank_venda <= 50, NA,
+                                    VAL_PLAN_SOMA_3_SEMANA)
+  ) %>% 
+  arrange(desc(VAL_PLAN_SOMA_3_SEMANA)) %>% 
+  mutate(rank_plan = row_number()) %>%
+  filter(rank_venda <= 50 | rank_plan <= 20)
+
+base3 <- mutate(base3,Feito = "n")
+base3 <- base3 %>% select(Feito, everything())
+
+base3 <- mutate(base3, 
+                VLR_VENDA_REAIS_3_SM = round(base3$VLR_VENDA_REAIS_3_SM,2),
+                VAL_PLAN_SOMA_3_SEMANA = round(base3$VAL_PLAN_SOMA_3_SEMANA,2))
+
+write.csv(base3, "base_teste_daniel.csv", row.names = F)
