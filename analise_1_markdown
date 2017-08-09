@@ -21,7 +21,6 @@ library(DT)
 library(magrittr)
 library(highcharter)
 library(glue)
-source("/home/casaevideo/minhas_funcoes.R")
 library(plotly)
 library(tidyverse)
 source("/home/casaevideo/minhas_funcoes.R")
@@ -58,13 +57,18 @@ df_sku <- readRDS("../trabalho/1_01.sku_df.Rda")
 -------------------
 
 ```{r, message=FALSE, warning=FALSE}
-nova_base <- transmute(comparacao_plan_mm, SKU = COD_SKU, NOM_SKU, NEG, dif = abs(QTD_PLANEJADO-QTD_MM))
+nova_base <- transmute(comparacao_plan_mm, SKU = COD_SKU, NOM_SKU, 
+                       NEG, QTD_PLANEJADO, QTD_MM, dif = abs(QTD_PLANEJADO-QTD_MM))
 
 tab <- nova_base %>% 
   group_by(SKU, NOM_SKU, NEG) %>% 
-  summarise(dif = sum(dif)) %>% 
+  summarise(mediana_plan = median(QTD_PLANEJADO), 
+            mediana_mm = median(QTD_MM), 
+            dif = median(dif)) %>% 
   arrange(desc(dif))
+
 base_ordenada <- tab[1:30,]
+
 datatable(base_ordenada, options = list(
   initComplete = JS(
     "function(settings, json) {",
@@ -107,12 +111,14 @@ ggplotly(P, height = 600, width = 640)
 
 ```{r, message=FALSE, warning=FALSE}
 comparacao_regressao_planejado_m <- comparacao_regressao_planejado %>% 
-  filter(ANO != 2018) %>% 
-  mutate(dif = abs(PREV_STK_SEM_EVENTO-PLAN_PECAS))
+                              filter(ANO != 2018) %>% 
+                              mutate(dif = abs(PREV_STK_SEM_EVENTO-PLAN_PECAS))
 
 B <- comparacao_regressao_planejado_m %>% 
   group_by(SKU) %>%
-  summarise(dif = sum(dif)) %>%
+  summarise(mediana_PREV = median(PREV_STK_SEM_EVENTO), 
+            mediana_PLAN = median(PLAN_PECAS), 
+            dif = median(dif)) %>%
   arrange(desc(dif)) %>% 
   slice(1:30)
 
@@ -294,8 +300,8 @@ highchart() %>%
 #quantidade de produtos em cada lista para cada semana 
 
 tabela_analise_pronta <- tabela_analise %>% 
-  select(SEMANA, LISTA, SKU) %>%  
-  group_by(SEMANA,LISTA) %>% 
+  select(ANO, SEMANA, LISTA, SKU) %>%  
+  group_by(ANO, SEMANA,LISTA) %>% 
   summarise(NUM_SKUS = n()) %>%  
   filter(SEMANA > 30)
 
@@ -338,7 +344,7 @@ P + geom_point(colour = "#0088cc", show.legend = T, size = 2) +
 
 ```{r, message=FALSE, warning=FALSE, plotly=TRUE}
 tabela_analise_mod <- tabela_analise %>% 
-  group_by(SEMANA) %>% 
+  group_by(ANO, SEMANA) %>% 
   summarise(POSSUI_LIM_ETQ = sum(POSSUI_LIM_ETQ))
 
 tabela_analise_mod <- tabela_analise_mod %>% 
@@ -406,13 +412,16 @@ p <- df_i %>%
                     "Negócio: ", NEG), colour = factor(ANALISTA))
         ) +
     geom_abline(slope = 1, intercept = 0, linetype = 2) + # reta transversal
-    scale_x_continuous(breaks = seq(0, 300, 50)) +
-    scale_y_continuous(breaks = seq(0, 300, 50)) +
+    scale_x_continuous(breaks = seq(0, 4891, 200)) +
+    scale_y_continuous(breaks = seq(0, 3752, 200)) +
     theme_bw() +
     labs(colour = "Analista")
 
 
 ggplotly(p, tooltip = "text", height = 600, width = 640)
 
+## teste <- df_i %>% group_by(SKU) %>% summarise(mean(QTD_REGRA), mean(QTD_PLAN))
+## max(teste$`mean(QTD_REGRA)`)
+## max(teste$`mean(QTD_PLAN)`)
 
 ```
