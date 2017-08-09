@@ -8,8 +8,10 @@ library(shinythemes)
 library(magrittr)
 library(rhandsontable)
 
-base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o arquivo Gera_base.R
-                                                      # só tem 1 pessoa  
+base_clecio <- read.csv("/home/sayuritakeda/base_teste_clecio.csv") 
+base_pablo <- read.csv("/home/sayuritakeda/base_teste_pablo.csv") 
+base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv") 
+
 
   ui <- tagList(
     navbarPage(
@@ -25,8 +27,7 @@ base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o a
                sidebarPanel(
                   
                  radioButtons("order","Escolha uma ordenação:", choiceNames = list("Venda", "Plan"),
-                              choiceValues = list("rank_venda","rank_plan")),
-                 textOutput("txt")
+                              choiceValues = list("rank_venda","rank_plan"))
 
                ),
                
@@ -38,7 +39,7 @@ base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o a
                  tabsetPanel(
                    tabPanel("TUDO",
                             h4("Table"),
-                            rHandsontableOutput("hot")
+                            rHandsontableOutput("table_total")
                             
                    ),
                    tabPanel("OK", 
@@ -53,16 +54,50 @@ base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o a
                  )
                )
       ),
-      tabPanel("Daniel", "This panel is intentionally left blank"),
-      tabPanel("Pablo", "This panel is intentionally left blank")
+      tabPanel("Pablo", 
+               sidebarPanel(
+                 
+                 actionButton("saveBtn_2", "save", icon("save"), 
+                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                 width = 2),
+               
+               sidebarPanel(
+                 
+                 radioButtons("order_2","Escolha uma ordenação:", choiceNames = list("Venda", "Plan"),
+                              choiceValues = list("rank_venda","rank_plan"))
+                 
+               ),
+               
+               
+               mainPanel(
+                 
+                 width = 10,
+                 
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("table_total_2")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            div(dataTableOutput("table_ok_2"), style = "font-size:70%")
+                            
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            div(dataTableOutput("table_falta_2"), style = "font-size:70%"))
+                 )
+               )
+      ),
+      
+      tabPanel("Daniel", "This panel is intentionally left blank")
     )
   )
   
  server <- function(input, output) {
-   
-   output$txt <- renderText({
-     paste("You chose", input$order)
-   })
+  
     
     fname = tempfile(fileext = ".csv")
     
@@ -70,40 +105,85 @@ base <- read.csv("/home/sayuritakeda/base_teste.csv") # base depois de rodar o a
       # remove button and isolate to update file automatically
       # after each table change
       input$saveBtn
-      hot = isolate(input$hot)
-      if (!is.null(hot)) {
-        write.csv(hot_to_r(input$hot), "/home/sayuritakeda/base_teste.csv", row.names = FALSE)
-        print("/home/sayuritakeda/base_teste.csv")
+      table_total = isolate(input$table_total)
+      if (!is.null(table_total)) {
+        write.csv(hot_to_r(input$table_total), "/home/sayuritakeda/base_teste_clecio.csv", row.names = FALSE)
+        print("/home/sayuritakeda/base_teste_clecio.csv")
       }
     })
     
-    output$hot = renderRHandsontable({
-      if (!is.null(input$hot)) {
-        DF = hot_to_r(input$hot)
-      } else {
-        DF = read.csv("base_teste.csv", stringsAsFactors = FALSE) %>% arrange(desc(rank_venda)) # tem que botar o input$order mas tirar as aspas 
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn_2
+      table_total_2 = isolate(input$table_total_2)
+      if (!is.null(table_total_2)) {
+        write.csv(hot_to_r(input$table_total_2), "/home/sayuritakeda/base_teste_pablo.csv", row.names = FALSE)
+        print("/home/sayuritakeda/base_teste_pablo.csv")
       }
+    })
+    
 
+    output$table_total = renderRHandsontable({
+      
+      # importar arquivo
+      DF = read.csv("base_teste_clecio.csv", stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order == "rank_venda") {
+        DF <- DF %>% arrange(desc(rank_venda))
+      } else {
+        DF <- DF %>% arrange(desc(rank_plan))
+      }
+      
       rhandsontable(DF) %>%
         hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
         hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.TextCell.renderer.apply(this, arguments);
     if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
       
-      
 
+    })
+    
+    
+    
+    output$table_total_2 = renderRHandsontable({
       
+      # importar arquivo
+      DF = read.csv("base_teste_pablo.csv", stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order_2 == "rank_venda") {
+        DF <- DF %>% arrange(desc(rank_venda))
+      } else {
+        DF <- DF %>% arrange(desc(rank_plan))
+      }
+      
+      rhandsontable(DF) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.TextCell.renderer.apply(this, arguments);
+    if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
       
     })
     
     output$table_ok = renderDataTable({
-      filter(base, Feito == "ok" | Feito == "OK")
+      filter(base_clecio, Feito == "ok" | Feito == "OK")
       })
+    
+    output$table_ok_2 = renderDataTable({
+      filter(base_pablo, Feito == "ok" | Feito == "OK")
+    })
   
     
     output$table_falta = renderDataTable(
-      filter(base, Feito != "ok" & Feito != "OK")
+      filter(base_clecio, Feito != "ok" & Feito != "OK")
     )
+    
+    output$table_falta_2 = renderDataTable(
+      filter(base_pablo, Feito != "ok" & Feito != "OK")
+    )
+    
  }
  
  shinyApp(ui, server)
