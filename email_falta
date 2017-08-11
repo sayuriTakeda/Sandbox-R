@@ -1,0 +1,126 @@
+library(RODBC)
+library(dplyr)
+library(lubridate)
+library(sendmailR)
+library(DT)
+library(tidyr)
+library(magrittr)
+library(rhandsontable)
+source("/home/---------/minhas_funcoes.R")
+
+db<- conectar_com_banco("BI")
+
+# QUERY DO SQL
+base_vuc <- sqlQuery(db, "select 
+COD_SKU,
+NOM_GM,
+COD_CATEGORIA AS CAT, 
+COD_NEGOCIO AS NEG,  
+COD_CLASSE_ATUAL AS CL, 
+VAL_PV,
+PV_APOSTA_S_MAIS_1,
+PV_APOSTA_S_MAIS_2,
+PV_APOSTA_S_MAIS_3,
+PV_APOSTA_S_MAIS_4,
+PV_APOSTA_S_MAIS_5,
+PV_APOSTA_S_MAIS_6,
+PV_APOSTA_S_MAIS_7,
+PV_APOSTA_S_MAIS_8,
+PV_APOSTA_S_MAIS_9,
+PV_APOSTA_S_MAIS_10,
+PV_APOSTA_S_MAIS_11,
+PV_APOSTA_S_MAIS_12,
+PV_APOSTA_S_MAIS_13
+from dbo_bi..tb_visao_unica
+where COD_CLASSE_ATUAL in ('A', 'B', 'I') AND
+COD_CATEGORIA not in ('k3', 'M2', 'N4', 'Y2', 'Z2', 'Z4', 'Z5')
+")
+
+# MONTA A PLANILHA
+teste_com_faltas <- base_vuc %>% filter(VAL_PV == "0" |
+                                PV_APOSTA_S_MAIS_1 == "0"|
+                                PV_APOSTA_S_MAIS_2 == "0"|
+                                PV_APOSTA_S_MAIS_3 == "0"|
+                                PV_APOSTA_S_MAIS_4 == "0"|
+                                PV_APOSTA_S_MAIS_5 == "0"|
+                                PV_APOSTA_S_MAIS_6 == "0"|
+                                PV_APOSTA_S_MAIS_7 == "0"|
+                                PV_APOSTA_S_MAIS_8 == "0"|
+                                PV_APOSTA_S_MAIS_9 == "0"|
+                                PV_APOSTA_S_MAIS_10 == "0"|
+                                PV_APOSTA_S_MAIS_11 == "0"|
+                                PV_APOSTA_S_MAIS_12 == "0"|
+                                PV_APOSTA_S_MAIS_13 == "0") 
+
+a <- teste_com_faltas %>% select(-NOM_GM,-CAT,-NEG,-CL) # retira colunas 
+b <- a %>% gather(COD_SKU) # troca colunas por linhas (para conseguir contar quantos 0 tem)
+
+# renomeia a segunda coluna
+colnames(b)[2] <- 'tipo' 
+
+base_agrupada <- group_by(b,COD_SKU)
+base_agrupada <- summarise(base_agrupada, qtd_semanas_sem_valor = sum(value == "0")) #160 valores 
+
+#fazer join
+base_agrupada_com_join <- left_join(base_agrupada,teste_com_faltas[0:5], by = "COD_SKU")
+
+base_agrupada_com_join %<>% 
+  select(COD_SKU, NOM_GM, CAT, NEG, CL, qtd_semanas_sem_valor) %>% 
+  arrange(NOM_GM)
+
+# rhandsontable(base_agrupada_com_join) %>%
+#   hot_table(highlightCol = TRUE, highlightRow = TRUE) %>%
+#   hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+#                  Handsontable.TextCell.renderer.apply(this, arguments);
+#                  if (NOM_GM == "-----------") td.style.background = 'lightblue',
+#       return td;
+#   }")
+
+
+# a custom table with both header and footer
+sketch = htmltools::withTags(table(
+  tableHeader(base_agrupada_com_join)
+))
+
+datatable(base_agrupada_com_join, 
+          container = sketch, options = list(pageLength = 200, dom = 'tip'), rownames = FALSE) %>%
+  formatStyle(columns =  "NOM_GM", color = "#b366ff")
+
+
+
+
+# ESCREVE O EXCEL
+write.csv2(teste_com_faltas, "base_faltas.csv") 
+
+
+# ENVIA E-MAIL PARA TIME
+
+## LIMPA BASE
+
+# configurar e-mail
+de <- "GrupoPlanejamentodeCompras@casaevideo.com.br"
+para <- c(",") 
+
+#semana <- formatC(lubridate::week(hoje), width = 2, flag = "0")
+#assunto <- sprintf("Alertas - Semana %s", semana)
+
+assunto <- sprintf("Produtos sem preco")
+
+corpo <- "teste" 
+
+servidor <- list(smtpServer = "admexch01.corp.casaevideo.com.br")
+
+# definir anexos
+
+output_csv <- ('/home/sayuritakeda/Vuc_sem_preco/base_faltas.csv')
+anexo_csv <- mime_part(x = output_csv)
+
+corpo_com_anexo <- list(corpo, anexo_csv)
+
+# mandar email
+sendmail(from = de, to = para, subject = assunto,
+         msg = corpo_com_anexo, control = servidor)
+
+
+
+
