@@ -2,11 +2,105 @@ library(RODBC)
 library(dplyr)
 library(lubridate)
 library(sendmailR)
+library(mailR)
 library(DT)
 library(tidyr)
 library(magrittr)
 library(rhandsontable)
-source("/home/---------/minhas_funcoes.R")
+source("/home/casaevideo/minhas_funcoes.R")
+
+
+tabelaMail <- function(df,grupo=NULL,separa=FALSE,coresFundo=c("none","#F5F5F5","#EAFAF1","#F9EBEA","#EBF5FB","#FEF9E7"),widget=FALSE){
+  require(data.table)
+  library(htmlTable)
+  
+  # Função para fazer um shift em um vetor
+  shiftVetor <- function(x, n, invert=FALSE, default=NA){
+    stopifnot(length(x)>=n)
+    if(n==0){
+      return(x)
+    }
+    n <- ifelse(invert, n*(-1), n)
+    if(n<0){
+      n <- abs(n)
+      forward=FALSE
+    }else{
+      forward=TRUE
+    }
+    if(forward){
+      return(c(rep(default, n), x[seq_len(length(x)-n)]))
+    }
+    if(!forward){
+      return(c(x[seq_len(length(x)-n)+n], rep(default, n)))
+    }
+  }
+  
+  if (separa == FALSE) {
+    separador <- "c"
+  }
+  else
+  {
+    separador <-"c|c"
+  }
+  
+  # Verifica se o usuário selecionou uma coluna para agrupar
+  if (is.null(grupo)) {
+    # Caso não seja feito agrupamento, apenas alterna as o fundo das linhas entre branco e cinza.
+    idGrupo <- rep(1,nrow(df)) 
+    coresFundo <- c("none","#F5F5F5")
+    # Caso seja utilizada a opção widget = TRUE, renderiza a tabela como datatable
+    if (widget == TRUE) { 
+      htmlTableWidget(df, col.rgroup = coresFundo, 
+                      css.table = "margin-top: 1em; margin-bottom: 1em;width: 50%;border-collapse:collapse;",
+                      align=separador)
+    }
+    
+    # Caso contrário retorna apenas o código HTML para ser utilizado posteriormente
+    else
+    {
+      htmlTable(df, col.rgroup = coresFundo, 
+                css.table = "margin-top: 1em; margin-bottom: 1em;width: 50%;border-collapse:collapse;",
+                align=separador)
+    }
+    
+  } 
+  else
+  { 
+    # Faz um sort no dataframe, pelo grupo que o usuário definiu, 
+    # de forma que todos os iguais fiquem juntos
+    df <- df[order(df[, grupo]), ]
+    
+    # Pega o índice de onde ocorrem as mudanças na coluna que está sendo agrupada
+    delimitadores <- data.table:::uniqlist(df[grupo]) - 1
+    
+    # Faz um shift no vetor, para calcular a quantidade de itens em cada grupo
+    shiftDelimitadores <- shiftVetor(delimitadores, -1, default=nrow(df))
+    idGrupo <- shiftDelimitadores - delimitadores
+    
+    # Adiciona a string "Grupo: " antes do valor do grupo, para utilizar como título na tabela
+    nomeGrupo <- paste0("Grupo: ",unique(df[grupo])[,1])
+    
+    # Caso seja utilizada a opção widget = TRUE, renderiza a tabela como datatable
+    if (widget == TRUE) { 
+      htmlTableWidget(df, col.rgroup = coresFundo, css.cell = "border-bottom: 1px solid #e6e6e6;",
+                      css.table = "margin-top: 1em; margin-bottom: 1em;width: 50%;border-collapse:collapse;",
+                      css.rgroup = "border-bottom: 1px solid #aaaaaa;",
+                      n.rgroup = idGrupo, rgroup=nomeGrupo, align=separador)
+    }
+    
+    # Caso contrário retorna apenas o código HTML para ser utilizado posteriormente
+    else
+    {
+      htmlTable(df, col.rgroup = coresFundo, css.cell = "border-bottom: 1px solid #e6e6e6;",
+                css.table = "margin-top: 1em; margin-bottom: 1em;width: 50%;border-collapse:collapse;",
+                css.rgroup = "border-bottom: 1px solid #aaaaaa;",
+                n.rgroup = idGrupo, rgroup=nomeGrupo, align=separador)
+    }
+    
+  } 
+  
+}
+
 
 db<- conectar_com_banco("BI")
 
@@ -36,6 +130,7 @@ where COD_CLASSE_ATUAL in ('A', 'B', 'I') AND
 COD_CATEGORIA not in ('k3', 'M2', 'N4', 'Y2', 'Z2', 'Z4', 'Z5')
 ")
 
+
 # MONTA A PLANILHA
 teste_com_faltas <- base_vuc %>% filter(VAL_PV == "0" |
                                 PV_APOSTA_S_MAIS_1 == "0"|
@@ -52,6 +147,10 @@ teste_com_faltas <- base_vuc %>% filter(VAL_PV == "0" |
                                 PV_APOSTA_S_MAIS_12 == "0"|
                                 PV_APOSTA_S_MAIS_13 == "0") 
 
+# ESCREVE O EXCEL
+write.csv2(teste_com_faltas, "base_faltas.csv") 
+
+
 a <- teste_com_faltas %>% select(-NOM_GM,-CAT,-NEG,-CL) # retira colunas 
 b <- a %>% gather(COD_SKU) # troca colunas por linhas (para conseguir contar quantos 0 tem)
 
@@ -65,62 +164,60 @@ base_agrupada <- summarise(base_agrupada, qtd_semanas_sem_valor = sum(value == "
 base_agrupada_com_join <- left_join(base_agrupada,teste_com_faltas[0:5], by = "COD_SKU")
 
 base_agrupada_com_join %<>% 
-  select(COD_SKU, NOM_GM, CAT, NEG, CL, qtd_semanas_sem_valor) %>% 
+  select(COD_SKU, NOM_GM,"Categoria_" = CAT, "Negocio_" = NEG, "Classe" = CL, "Qtd semana sem valor" = qtd_semanas_sem_valor) %>% 
   arrange(NOM_GM)
 
-# rhandsontable(base_agrupada_com_join) %>%
-#   hot_table(highlightCol = TRUE, highlightRow = TRUE) %>%
-#   hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
-#                  Handsontable.TextCell.renderer.apply(this, arguments);
-#                  if (NOM_GM == "-----------") td.style.background = 'lightblue',
-#       return td;
-#   }")
+tabela_bruna <- filter(base_agrupada_com_join, NOM_GM == "BRUNA FRANCO VIANA")
+tabela_fabio <- filter(base_agrupada_com_join, NOM_GM == "FABIO LIMA DOS SANTOS")
+tabela_fernanda <- filter(base_agrupada_com_join, NOM_GM == "FERNANDA MARTINS GIL")
+tabela_jose <- filter(base_agrupada_com_join, NOM_GM == "JOSE LEANDRO SIMOES CARDOSO")
+tabela_luana <- filter(base_agrupada_com_join, NOM_GM == "LUANA DALE CAPANEMA PETROCCHI")
 
-
-# a custom table with both header and footer
-sketch = htmltools::withTags(table(
-  tableHeader(base_agrupada_com_join)
-))
-
-datatable(base_agrupada_com_join, 
-          container = sketch, options = list(pageLength = 200, dom = 'tip'), rownames = FALSE) %>%
-  formatStyle(columns =  "NOM_GM", color = "#b366ff")
-
-
-
-
-# ESCREVE O EXCEL
-write.csv2(teste_com_faltas, "base_faltas.csv") 
-
-
-# ENVIA E-MAIL PARA TIME
-
-## LIMPA BASE
-
+## ENVIA E-MAIL PARA TIME
 # configurar e-mail
 de <- "GrupoPlanejamentodeCompras@casaevideo.com.br"
-para <- c(",") 
 
-#semana <- formatC(lubridate::week(hoje), width = 2, flag = "0")
-#assunto <- sprintf("Alertas - Semana %s", semana)
+semana <- formatC(lubridate::week(today()), width = 2, flag = "0")
+assunto <- sprintf("Produtos sem Preco - Semana %s", semana)
 
-assunto <- sprintf("Produtos sem preco")
-
-corpo <- "teste" 
+corpo <- paste0("Seguem produtos sem preços para semana") 
 
 servidor <- list(smtpServer = "admexch01.corp.casaevideo.com.br")
 
 # definir anexos
-
 output_csv <- ('/home/sayuritakeda/Vuc_sem_preco/base_faltas.csv')
-anexo_csv <- mime_part(x = output_csv)
-
-corpo_com_anexo <- list(corpo, anexo_csv)
-
-# mandar email
-sendmail(from = de, to = para, subject = assunto,
-         msg = corpo_com_anexo, control = servidor)
 
 
+
+tabela_bruna <- tabelaMail(tabela_bruna)
+tabela_fabio <- tabelaMail(tabela_fabio)
+tabela_fernanda <- tabelaMail(tabela_fernanda)
+tabela_jose <- tabelaMail(tabela_jose)
+tabela_luana <- tabelaMail(tabela_luana)
+
+para_bruna <- c("patricia.takeda@casaevideo.com.br") # c("","")
+para_fabio <- c("patricia.takeda@casaevideo.com.br") # c("","")
+para_fernanda <- c("patricia.takeda@casaevideo.com.br") # c("","")
+para_jose <- c("patricia.takeda@casaevideo.com.br") # c("","")
+para_luana <- c("patricia.takeda@casaevideo.com.br") # c("","")
+
+vetor <- c(tabela_bruna, tabela_fabio, tabela_fernanda, tabela_jose, tabela_luana)
+
+for(tabela_pessoa in vetor){
+  ifelse(tabela_pessoa == tabela_bruna, para <- para_bruna,print("no"))
+  ifelse(tabela_pessoa == tabela_fabio, para <- para_fabio,print("no"))
+  ifelse(tabela_pessoa == tabela_fernanda, para <- para_fernanda,print("no"))
+  ifelse(tabela_pessoa == tabela_jose, para <- para_jose,print("no"))
+  ifelse(tabela_pessoa == tabela_luana, para <- para_luana,print("no"))
+    send.mail(from = de,
+              to = para,
+              subject = assunto,
+              body = tabela_pessoa,
+              html = TRUE,
+              smtp = list(host.name = "cevadmexch03", port = 25, user.name = "", passwd = "", ssl = FALSE),
+              attach.files = output_csv,
+              authenticate = FALSE,
+              send = TRUE)
+}
 
 
