@@ -1,0 +1,19 @@
+# gather
+a <- teste_com_faltas %>% select(-NOM_GM,-NOM_SKU,-CAT,-NEG,-CL) # retira colunas 
+b <- a %>% gather(COD_SKU) # troca colunas por linhas (para conseguir contar quantos 0 tem)
+
+# renomeia a segunda coluna
+colnames(b)[2] <- 'tipo' 
+
+# cria vetor com nomes
+vetor_nomes <- base_agrupada_com_join$Nome %>% unique()
+n <- length(vetor_nomes)
+
+# Cria os arquivos csv
+for (i in 1:n){
+   nom <- vetor_nomes[i]
+   tabela_filtrada <- teste_com_faltas %>% filter(NOM_GM == nom)
+   # salvar arquivo
+   arquivo <- paste0("base_faltas_",vetor_nomes[i],".csv") 
+   write.csv2(tabela_filtrada, arquivo, row.names = FALSE)
+} 
