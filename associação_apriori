@@ -1,0 +1,33 @@
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(highcharter)
+
+base <- read.csv2("/home/sayuritakeda/apriori.csv", 
+                  fileEncoding = "ISO-8859-1",
+                  stringsAsFactors = FALSE)
+base <- base[,-7]
+
+# para conseguir fazer o gráfico com gradient colours
+base$SUPPORT <- as.double(base$SUPPORT)
+base$CONFIDENCE <- as.double(base$CONFIDENCE)
+base$LIFT <- as.double(base$LIFT)
+
+
+df <- data.frame(
+  x = base$LHS,
+  y = base$RHS,
+  Lift = base$LIFT
+)
+
+p<-ggplot(df, aes(x, y)) +
+  geom_point(aes(colour = Lift),size = 3) +
+  scale_colour_gradient(low = "#e6f0ff", high = "#001433") +
+  theme(axis.text.x=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank())
+
+ggplotly(p,  width = 1140, height = 700)
+
+
+# theme(axis.text.x = element_text(angle = 90,hjust = 1)) # os nomes do eixo x não podem aparecer pois são grandes
