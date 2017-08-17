@@ -1,0 +1,11 @@
+df <- data.frame(
+  x = iris$Sepal.Length,
+  y = iris$Petal.Length,
+  z1 = rnorm(150),
+  z2 = iris$Sepal.Length
+)
+
+
+ggplot(df, aes(x, y)) +
+  geom_point(aes(colour = z2)) +
+  scale_colour_gradient(low = "#33ccff", high = "#ff99cc")
