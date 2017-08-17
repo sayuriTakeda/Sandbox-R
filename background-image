@@ -1,0 +1,17 @@
+ui <- fluidPage(
+  
+  h1("Shiny Widgets Gallery", style = "font-weight: 280", 
+     style = "font-family: 'Source Sans Pro';
+        color: #e6f2ff; text-align: center;
+        background-image: url('texturebg.png');
+        padding: 15px"),
+
+  br(),
+  
+  ...
+  ...
+  ...
+  )
+  
+  
+  
