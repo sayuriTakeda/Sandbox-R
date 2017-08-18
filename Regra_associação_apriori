@@ -1,0 +1,146 @@
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(magrittr)
+library(highcharter)
+library(RODBC)
+source("/home/casaevideo/minhas_funcoes.R")
+
+#db<- conectar_com_banco("BI")
+Query <- sqlQuery(db, "
+                  select COD_SKU AS LHS, NOM_SKU AS NOM from dbo_BI.dbo.TB_HIERARQUIA_SKU_COMPLETA
+                  ;")
+Query$LHS <- as.character(Query$LHS)
+
+base <- readRDS("/home/sayuritakeda/tab_sayuri.Rda")
+base %<>% mutate_if(is.factor, as.character)
+
+# identificar a combinacao
+base$ID <- 1:nrow(base)
+
+# criar uma coluna para cada SKU do LHS
+base3 <- base %>% separate_rows(LHS, sep = "\\+")
+
+base3$LHS <- trimws(base3$LHS)
+
+base3 <- left_join(base3,Query,by = "LHS")
+
+base_concat <- base3 %>% 
+  group_by(ID) %>% 
+  summarise(NOME = paste0(NOM, collapse = " + "))
+
+base_final <- left_join(base,base_concat, by = "ID")
+
+# renomear para fazer o join
+Query <- rename(Query, RHS = LHS)
+
+# botar como character para fazer o join 
+base_final$RHS <- as.character(base_final$RHS)
+Query$RHS <- as.character(Query$RHS)
+
+base_final <- left_join(base_final,Query,by = "RHS")
+
+base <- select(base_final, LHS = NOME, RHS = NOM, SUPPORT = support, CONFIDENCE = confidence, LIFT = lift)
+
+# base <- read.csv2("/home/sayuritakeda/apriori.csv", 
+#                   fileEncoding = "ISO-8859-1",
+#                   stringsAsFactors = FALSE)
+# base <- base[,-7]
+
+# base$SUPPORT <- as.double(base$SUPPORT)
+# base$CONFIDENCE <- as.double(base$CONFIDENCE)
+# base$LIFT <- as.double(base$LIFT)
+
+base_graph <- arrange(base, desc(base$LIFT))
+base_graph <- head(base_graph, n=50)
+
+df <- data.frame(
+  x = base_graph$LHS,
+  y = base_graph$RHS,
+  Lift = base_graph$LIFT
+)
+
+
+ui <- dashboardPage(skin = "blue",
+                    dashboardHeader(title = "Teste"),
+                    dashboardSidebar(
+                      sidebarMenu(
+                        menuItem("Tabela", tabName = "tabela", icon = icon("th"),
+                                 badgeLabel = "new", badgeColor = "green"),
+                        menuItem("Gráficos", tabName = "Tabelas", icon = icon("area-chart"),
+                                 menuSubItem("Sub-item 1", tabName = "subitem1"),
+                                 menuSubItem("Sub-item 2", tabName = "subitem2")),
+                        menuItem("Help", tabName = "help", icon = icon("question"))
+                      )
+                    ),
+                    dashboardBody(
+                      tabItems(
+                        tabItem(tabName = "tabela", 
+                                fluidRow( 
+                                  infoBoxOutput("progressBox"),
+                                  infoBoxOutput("progressBox2"),
+                                  infoBoxOutput("progressBox3")
+                                ),  
+                                fluidRow(
+                                  dataTableOutput("base")
+                                )
+                        ),
+                        tabItem(
+                          tabName = "subitem1",plotlyOutput("plot1") 
+                        ),
+                        tabItem(
+                          tabName = "subitem2",h2("tabela2")
+                        ),
+                        tabItem(tabName = "help",h2("Help"),
+                                fluidRow(
+                                  box(
+                                    title = "SUPPORT",width = 4, background = "light-blue",
+                                    " % de cupons que possuem determinada combinação (A) "
+                                  ),
+                                  box(
+                                    title = "CONFIDENCE",width = 4, background = "light-blue",
+                                    "Percentual de ocorrência da regra (A -> B)"
+                                  ),
+                                  box(
+                                    title = "LIFT",width = 4, background = "light-blue",
+                                    "Quantas vezes aumenta a chance do B dado que o cliente levou o A"
+                                  )
+                                ))
+                      )
+                    ))
+
+server <- function(input, output, session) {
+  
+  output$base = renderDataTable({
+    base
+  })
+  
+  output$plot1 <- renderPlotly({
+    p<-ggplot(df, aes(x, y)) +
+      geom_point(aes(colour = Lift),size = 3) +
+      scale_colour_gradient(low = "#e6f0ff", high = "#001433") +
+      theme(axis.text.x=element_blank(),
+            axis.title.x=element_blank(),
+            axis.title.y=element_blank()) 
+    
+    ggplotly(p,  width = 1000, height = 500)})
+  
+  output$plot2 <- renderPlot({plot(iris$Petal.Length,iris$Petal.Width)})
+  
+  output$progressBox <- renderInfoBox({infoBox("SUPPORT",
+                                               paste0("Min: ",round(min(base$SUPPORT),3)," /","\n",
+                                                      "Max: ",round(max(base$SUPPORT),3)),
+                                               color = "blue")})
+  output$progressBox2 <- renderInfoBox({infoBox("CONFIDENCE",
+                                                paste0("Min: ",round(min(base$CONFIDENCE),3)," /","\n",
+                                                       "Max: ",round(max(base$CONFIDENCE),3)),
+                                                color = "blue")})
+  output$progressBox3 <- renderInfoBox({infoBox("LIFT",
+                                                paste0("Min: ",round(min(base$LIFT),1)," /","\n",
+                                                       "Max: ",round(max(base$LIFT),1)),
+                                                color = "blue")})
+}
+
+shinyApp(ui, server)
