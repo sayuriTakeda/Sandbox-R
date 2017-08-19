@@ -12,7 +12,6 @@ base_clecio <- read.csv("/home/sayuritakeda/base_teste_clecio.csv")
 base_pablo <- read.csv("/home/sayuritakeda/base_teste_pablo.csv") 
 base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv") 
 
-
   ui <- tagList(
     navbarPage(
       theme = shinytheme("flatly"), # tema de cores 
