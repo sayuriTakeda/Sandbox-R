@@ -167,11 +167,11 @@ base_agrupada_com_join %<>%
   select(COD_SKU, NOM_GM,"Categoria_" = CAT, "Negocio_" = NEG, "Classe" = CL, "Qtd semana sem valor" = qtd_semanas_sem_valor) %>% 
   arrange(NOM_GM)
 
-tabela_bruna <- filter(base_agrupada_com_join, NOM_GM == "BRUNA FRANCO VIANA")
-tabela_fabio <- filter(base_agrupada_com_join, NOM_GM == "FABIO LIMA DOS SANTOS")
-tabela_fernanda <- filter(base_agrupada_com_join, NOM_GM == "FERNANDA MARTINS GIL")
-tabela_jose <- filter(base_agrupada_com_join, NOM_GM == "JOSE LEANDRO SIMOES CARDOSO")
-tabela_luana <- filter(base_agrupada_com_join, NOM_GM == "LUANA DALE CAPANEMA PETROCCHI")
+tabela_bruna <- filter(base_agrupada_com_join, NOM_GM == "--------------")
+tabela_fabio <- filter(base_agrupada_com_join, NOM_GM == "--------------")
+tabela_fernanda <- filter(base_agrupada_com_join, NOM_GM == "--------------")
+tabela_jose <- filter(base_agrupada_com_join, NOM_GM == "--------------")
+tabela_luana <- filter(base_agrupada_com_join, NOM_GM == "--------------")
 
 ## ENVIA E-MAIL PARA TIME
 # configurar e-mail
@@ -195,11 +195,12 @@ tabela_fernanda <- tabelaMail(tabela_fernanda)
 tabela_jose <- tabelaMail(tabela_jose)
 tabela_luana <- tabelaMail(tabela_luana)
 
-para_bruna <- c("patricia.takeda@casaevideo.com.br") # c("","")
-para_fabio <- c("patricia.takeda@casaevideo.com.br") # c("","")
-para_fernanda <- c("patricia.takeda@casaevideo.com.br") # c("","")
-para_jose <- c("patricia.takeda@casaevideo.com.br") # c("","")
-para_luana <- c("patricia.takeda@casaevideo.com.br") # c("","")
+#teste
+para_bruna <- c("patricia.takeda@--------------.com.br") # c("","")
+para_fabio <- c("patricia.takeda@--------------.com.br") # c("","")
+para_fernanda <- c("patricia.takeda@--------------.com.br") # c("","")
+para_jose <- c("patricia.takeda@--------------.com.br") # c("","")
+para_luana <- c("patricia.takeda@--------------.com.br") # c("","")
 
 vetor <- c(tabela_bruna, tabela_fabio, tabela_fernanda, tabela_jose, tabela_luana)
 
@@ -219,5 +220,4 @@ for(tabela_pessoa in vetor){
               authenticate = FALSE,
               send = TRUE)
 }
-
 
