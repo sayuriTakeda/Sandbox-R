@@ -1,4 +1,3 @@
-
 library(magrittr)
 library(highcharter)
 highchart() %>% 
@@ -7,13 +6,9 @@ hc_add_series_scatter(tabela_analise$SEMANA, tabela_analise$POSSUI_LIM_ETQ) %>%
 hc_xAxis(title = list(text = "Semana")) %>% 
 hc_yAxis(title = list(text = "QTD_LIM_ETQ"))
 
-
-
 library("highcharter")
 data(diamonds, mpg, package = "ggplot2")
 hchart(mpg, "scatter", hcaes(x = displ, y = hwy, group = class))
-
-
 
 library(plotly)
 p <- ggplot(tabela_analise,aes(SEMANA,POSSUI_LIM_ETQ)) +
@@ -21,8 +16,6 @@ p <- ggplot(tabela_analise,aes(SEMANA,POSSUI_LIM_ETQ)) +
   labs(x = "Semana",y = "QTD_LIM_ETQ")
 
 ggplotly(p)
-
-
 
 x2<- max(c(base_grafico$MEDIA_QTD_PLANEJADO,base_grafico$MEDIA_QTD_MM))
 P <- ggplot(base_grafico,aes(MEDIA_QTD_PLANEJADO,MEDIA_QTD_MM)) + 
