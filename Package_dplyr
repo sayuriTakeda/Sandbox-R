@@ -64,3 +64,4 @@ c <- select(b, -Species)
 
 base_tes_pip = iris %>% filter(Sepal.Length > 5) %>% filter(Sepal.Width > 3) %>% select(-Species)
 base_tes_pip
+
