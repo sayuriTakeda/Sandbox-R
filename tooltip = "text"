@@ -32,5 +32,4 @@ p <- df_i %>%
     scale_y_continuous(breaks = seq(0, 300, 50)) +
     theme_bw()
 
-
 ggplotly(p, tooltip = "text", height = 600, width = 640)
