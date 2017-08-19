@@ -101,7 +101,7 @@ ui <- dashboardPage(skin = "blue",
                                   ),
                                   box(
                                     title = "CONFIDENCE",width = 4, background = "light-blue",
-                                    "Percentual de ocorrência da regra (A -> B)"
+                                    "Percentual de ocorrência da regra"
                                   ),
                                   box(
                                     title = "LIFT",width = 4, background = "light-blue",
