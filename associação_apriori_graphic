@@ -13,7 +13,6 @@ base$SUPPORT <- as.double(base$SUPPORT)
 base$CONFIDENCE <- as.double(base$CONFIDENCE)
 base$LIFT <- as.double(base$LIFT)
 
-
 df <- data.frame(
   x = base$LHS,
   y = base$RHS,
