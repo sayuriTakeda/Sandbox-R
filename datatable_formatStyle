@@ -4,4 +4,3 @@ datatable(base_iris) %>%
   formatStyle('Sepal.Width',
   backgroundColor = styleInterval(3.4, c('yellow', 'gray'))
   )
-  
