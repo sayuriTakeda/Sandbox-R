@@ -30,4 +30,3 @@ p<-ggplot(df, aes(x, y)) +
 ggplotly(p,  width = 1140, height = 700)
 
 # theme(axis.text.x = element_text(angle = 90,hjust = 1)) # os nomes do eixo x não podem aparecer pois são grandes
-
