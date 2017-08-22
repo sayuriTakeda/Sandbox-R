@@ -2,7 +2,7 @@
 a <- teste_com_faltas %>% select(-NOM_GM,-NOM_SKU,-CAT,-NEG,-CL) # retira colunas 
 b <- a %>% gather(COD_SKU) # troca colunas por linhas (para conseguir contar quantos 0 tem)
 
-# renomeia a segunda coluna
+# renomeia a segunda col
 colnames(b)[2] <- 'tipo' 
 
 # cria vetor com nomes
@@ -17,3 +17,4 @@ for (i in 1:n){
    arquivo <- paste0("base_faltas_",vetor_nomes[i],".csv") 
    write.csv2(tabela_filtrada, arquivo, row.names = FALSE)
 } 
+
