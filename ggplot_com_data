@@ -1,0 +1,27 @@
+library(lubridate)
+library(dplyr)
+library(magrittr)
+
+base <- read.csv2("----------------------------", header = F)
+
+base %<>% 
+  rename("wape" = V2) %>%  
+  mutate(ano = substr(base$V1,1,4), mes = substr(base$V1,5,6)) # coluna apenas com ano e outra com mês
+
+base <- mutate(base, Data = paste0(base$ano,"-",base$mes)) # isso que será utilizado na tooltip e aes 
+
+base$wape <- as.character(base$wape)
+base$wape <- as.numeric(base$wape)    # se transformar em numerico direto não dá certo 
+
+p <- base %>% 
+ggplot(aes(Data,wape)) +
+  geom_point(aes(
+    text = paste0("Data: ", Data , "\n",
+                  "Wape: ", wape), 
+    colour = factor(ano)),
+    size = 2) +
+  theme_bw() +
+  labs(colour = "Ano", x = "") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplotly(p, tooltip = "text", width = 640, height = 500) 
