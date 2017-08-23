@@ -2,7 +2,7 @@ library(lubridate)
 library(dplyr)
 library(magrittr)
 
-base <- read.csv2("----------------------------", header = F)
+base <- read.csv2("----------------------------", header = F) 
 
 base %<>% 
   rename("wape" = V2) %>%  
@@ -25,3 +25,4 @@ ggplot(aes(Data,wape)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ggplotly(p, tooltip = "text", width = 640, height = 500) 
+
