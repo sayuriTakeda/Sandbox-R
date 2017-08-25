@@ -1,0 +1,4 @@
+teste3 <- data.frame("validacao" = integer())
+teste3[nrow(teste3)+1,] <- 1
+teste3[nrow(teste3)+1,] <- 0
+teste3
