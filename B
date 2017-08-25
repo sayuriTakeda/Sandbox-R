@@ -1,0 +1,69 @@
+library(lubridate)
+library(RODBC)
+library(dplyr)
+library(magrittr)
+library(glue)
+#source("/home/.........../minhas_funcoes.R")
+
+base_fluxo <- read.csv2("/home/sayuritakeda/Romulo/base_romulo.csv",row.names=NULL,header = TRUE, fileEncoding = "ISO-8859-1")
+abertura_loja <- read.csv2("/home/sayuritakeda/Romulo/ABERTURA_LOJA.csv",header = TRUE, fileEncoding = "ISO-8859-1")
+abertura_loja <- rename(abertura_loja,COD_FILIAL = Cod)
+tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
+
+#db<- conectar_com_banco("BI")
+
+QUERY...............
+
+base_fluxo$DAT_OPERACAO <- substring(base_fluxo$DAT_OPERACAO,1,10) # para tirar hora depois de data 
+
+DIAS_SEM <- wday(dmy(base_fluxo$DAT_OPERACAO))
+DIAS <- wday(DIAS_SEM, label = TRUE)
+SEM <- week(dmy(base_fluxo$DAT_OPERACAO))
+MES <- month(base_fluxo$DAT_OPERACAO)
+MES2 <- month(base_fluxo$DAT_OPERACAO, label = TRUE)
+ANO <- substr(base_fluxo$DAT_OPERACAO,7,10)
+
+base_fluxo <- mutate(base_fluxo, DIAS_SEM, DIAS, SEM, MES, MES2, ANO)
+
+base_fluxo <- left_join(base_fluxo, abertura_loja, by = "COD_FILIAL")
+
+base_fluxo <- base_fluxo[-16]
+
+# se tiver NA na Hora.Ab. ou Hora.Fech. tem que tirar a linha toda
+base_fluxo <- na.omit(base_fluxo) # tem NA (filial 238 não existe mais)
+
+base_fluxo %<>% mutate(
+  validacao_horario = ifelse(HOR_PROCESSAMENTO >= Hora.Ab. & HOR_PROCESSAMENTO <= Hora.Fech., 1, 0)
+  )
+
+#quartil não fiz
+tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
+tipo_de_loja <- select(tipo_de_loja,COD_FILIAL, X.1)
+tipo_de_loja <- tipo_de_loja[-1:-3,]
+tipo_de_loja <- as.data.frame(tipo_de_loja)
+tipo_de_loja$COD_FILIAL <- as.character(tipo_de_loja$COD_FILIAL)
+tipo_de_loja$COD_FILIAL <- as.integer(tipo_de_loja$COD_FILIAL)
+
+base_fluxo <- left_join(base_fluxo, tipo_de_loja, by = "COD_FILIAL")
+
+base_fluxo %<>% mutate(
+  ATINGIMENTO = base_fluxo$QTD_CUPOM_ATUAL / base_fluxo$QTD_CLIENTE_ATUAL
+  )
+
+# não é para omitir e sim para botar vazio ou 0
+# filter(base_fluxo, base_fluxo$ATINGIMENTO == "Inf")
+# filter(base_fluxo, base_fluxo$ATINGIMENTO == "NaN")
+
+base_fluxo[base_fluxo == "Inf"] <- 0
+base_fluxo[base_fluxo == "NaN"] <- 0
+
+tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
+tipo_de_loja <- select(tipo_de_loja,COD_FILIAL, X.2)
+tipo_de_loja <- tipo_de_loja[-1:-3,]
+tipo_de_loja <- as.data.frame(tipo_de_loja)
+tipo_de_loja$COD_FILIAL <- as.character(tipo_de_loja$COD_FILIAL)
+tipo_de_loja$COD_FILIAL <- as.integer(tipo_de_loja$COD_FILIAL)
+
+base_fluxo <- left_join(base_fluxo, tipo_de_loja, by = "COD_FILIAL")
+
+base_fluxo %<>% mutate(ANO_SEMANA_COD = paste0(base_fluxo$ANO_SEM,"/", base_fluxo$COD_FILIAL))
