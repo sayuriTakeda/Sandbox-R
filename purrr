@@ -1,0 +1,28 @@
+setwd("/srv/shiny-server/apps/pre_top_wape/")
+
+library(glue)
+library(dplyr)
+library(magrittr)
+source("/home/--------------/minhas_funcoes.R")
+
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+# listar os arquivos na pasta
+arquivos <- dir("data", full.names = TRUE, pattern = "*.csv")
+arquivos <- sort(arquivos)
+# extrair semana do nome do arquivo
+semanas <- readr::parse_number(arquivos)
+# criar funcao que le arquivo e acrescenta colun
+ler_arquivo <- function(file) {
+  
+  semana_arquivo <- readr::parse_number(file)
+  x <- read.csv(file, stringsAsFactors = FALSE)
+  # acrescentar coluna
+  x[["SEMANA_ARQUIVO"]] <- semana_arquivo
+  x
+}
+
+df <- arquivos %>% purrr::map_df(ler_arquivo)
+
+write.csv(df, "---------------.csv" , row.names = FALSE)
