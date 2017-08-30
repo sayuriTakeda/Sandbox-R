@@ -1,42 +1,39 @@
+source("/home/-----------/minhas_funcoes.R")
 library(lubridate)
+library(magrittr)
 library(RODBC)
 library(dplyr)
-library(magrittr)
 library(glue)
-#source("/home/.........../minhas_funcoes.R")
 
-base_fluxo <- read.csv2("/home/sayuritakeda/Romulo/base_romulo.csv",row.names=NULL,header = TRUE, fileEncoding = "ISO-8859-1")
-abertura_loja <- read.csv2("/home/sayuritakeda/Romulo/ABERTURA_LOJA.csv",header = TRUE, fileEncoding = "ISO-8859-1")
-abertura_loja <- rename(abertura_loja,COD_FILIAL = Cod)
-tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
-
-#db<- conectar_com_banco("BI")
-
-QUERY...............
+## parametros do codigo
+q1 <- 0.3
+q3 <- 0.75
+vetor <- c("2016-32","2016-33","2016-34","2016-35")
+vetor2 <- c("2017-31","2017-32","2017-33","2017-34")
 
 base_fluxo$DAT_OPERACAO <- substring(base_fluxo$DAT_OPERACAO,1,10) # para tirar hora depois de data 
 
-DIAS_SEM <- wday(dmy(base_fluxo$DAT_OPERACAO))
-DIAS <- wday(DIAS_SEM, label = TRUE)
-SEM <- week(dmy(base_fluxo$DAT_OPERACAO))
-MES <- month(base_fluxo$DAT_OPERACAO)
-MES2 <- month(base_fluxo$DAT_OPERACAO, label = TRUE)
-ANO <- substr(base_fluxo$DAT_OPERACAO,7,10)
-
-base_fluxo <- mutate(base_fluxo, DIAS_SEM, DIAS, SEM, MES, MES2, ANO)
+base_fluxo <- base_fluxo %>% 
+  mutate(DIAS_SEM = wday(dmy(base_fluxo$DAT_OPERACAO)),
+         DIAS = wday(DIAS_SEM, label = TRUE),
+         SEM = week(dmy(base_fluxo$DAT_OPERACAO)),
+         MES = month(base_fluxo$DAT_OPERACAO),
+         MES2 = month(base_fluxo$DAT_OPERACAO, label = TRUE),
+         ANO = substr(base_fluxo$DAT_OPERACAO,7,10))
 
 base_fluxo <- left_join(base_fluxo, abertura_loja, by = "COD_FILIAL")
 
 base_fluxo <- base_fluxo[-16]
 
 # se tiver NA na Hora.Ab. ou Hora.Fech. tem que tirar a linha toda
-base_fluxo <- na.omit(base_fluxo) # tem NA (filial 238 não existe mais)
+base_fluxo <- na.omit(base_fluxo) # tem NA (filial 238 e 226 não existem mais)
 
 base_fluxo %<>% mutate(
   validacao_horario = ifelse(HOR_PROCESSAMENTO >= Hora.Ab. & HOR_PROCESSAMENTO <= Hora.Fech., 1, 0)
   )
 
-#quartil não fiz
+#quartil no final 
+
 tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
 tipo_de_loja <- select(tipo_de_loja,COD_FILIAL, X.1)
 tipo_de_loja <- tipo_de_loja[-1:-3,]
@@ -67,3 +64,206 @@ tipo_de_loja$COD_FILIAL <- as.integer(tipo_de_loja$COD_FILIAL)
 base_fluxo <- left_join(base_fluxo, tipo_de_loja, by = "COD_FILIAL")
 
 base_fluxo %<>% mutate(ANO_SEMANA_COD = paste0(base_fluxo$ANO_SEM,"/", base_fluxo$COD_FILIAL))
+
+Quant_dias_aproveitamento <- base_fluxo %>% select(ANO_SEM,COD_FILIAL,ANO_SEMANA_COD,DAT_OPERACAO)
+
+Quant_dias_aproveitamento <- base_fluxo %>% 
+  distinct(ANO_SEMANA_COD, DAT_OPERACAO) %>% 
+  count(ANO_SEMANA_COD)
+
+base_fluxo <- left_join(base_fluxo,Quant_dias_aproveitamento, by = "ANO_SEMANA_COD")
+
+base_fluxo <- rename(base_fluxo, Quantidade_de_Dias = n, Tipo_de_Loja = X.1, Abre_domingo = X.2)
+
+base_fluxo %<>% mutate(Validacao_Dia = paste0(Quantidade_de_Dias,"-",Abre_domingo))
+
+# se estiver entre o quartil 1 e 3 insere 1, caso contrário 0  
+base_fluxo %<>% mutate(
+ quartil = ifelse(ATINGIMENTO >= round(quantile(base_fluxo$ATINGIMENTO,q1),2) & 
+                  ATINGIMENTO <= round(quantile(base_fluxo$ATINGIMENTO,q3),2), 1, 0)
+)
+
+########### TD-LOJA ###########
+tab_1 <- base_fluxo %>% 
+  filter(PCT_ATUAL == 100, 
+         validacao_horario == 1, 
+         quartil == 1, 
+         Validacao_Dia %in% c("6-Não","7-Sim"), 
+         ANO == 2016, 
+         ANO_SEM %in% vetor)
+
+tab_1 %<>% 
+  group_by(COD_FILIAL, NOM_FILIAL) %>%  
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL), 
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL), 
+            HOR_PROCESSAMENTO = n())
+
+tab_1$QTD_CUPOM_ATUAL <- as.numeric(tab_1$QTD_CUPOM_ATUAL)
+tab_1$QTD_CLIENTE_ATUAL <- as.numeric(tab_1$QTD_CLIENTE_ATUAL)
+tab_1$HOR_PROCESSAMENTO <- as.numeric(tab_1$HOR_PROCESSAMENTO)
+tab_1 <- as.data.frame(tab_1)
+tab_1 %<>% mutate("Cupons/Hora" = tab_1$QTD_CUPOM_ATUAL / tab_1$HOR_PROCESSAMENTO, 
+                  Conversao = tab_1$QTD_CUPOM_ATUAL / tab_1$QTD_CLIENTE_ATUAL)
+tab_1[tab_1 == "Inf"] <- 0
+tab_1[tab_1 == "NaN"] <- 0
+
+#__________
+
+tab_2 <- base_fluxo %>% 
+  filter(PCT_ATUAL == 100,
+         validacao_horario == 1,
+         quartil == 1,
+         Validacao_Dia %in% c("6-Não","7-Sim"),
+         ANO == 2017,
+         ANO_SEM %in% vetor2)
+
+tab_2 %<>% 
+  group_by(COD_FILIAL,NOM_FILIAL) %>% 
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL), 
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL), 
+            HOR_PROCESSAMENTO = n())
+
+tab_2$QTD_CLIENTE_ATUAL <- as.numeric(tab_2$QTD_CLIENTE_ATUAL)
+tab_2$QTD_CUPOM_ATUAL <- as.numeric(tab_2$QTD_CUPOM_ATUAL)
+tab_2$HOR_PROCESSAMENTO <- as.numeric(tab_2$HOR_PROCESSAMENTO)
+tab_2 <- as.data.frame(tab_2)
+tab_2 %<>% mutate("Cupons/Hora" = tab_2$QTD_CUPOM_ATUAL/tab_2$HOR_PROCESSAMENTO, 
+                  "Conversao" = QTD_CUPOM_ATUAL / QTD_CLIENTE_ATUAL)
+tab_2[tab_2 == "Inf"] <- 0
+tab_2[tab_2 == "NaN"] <- 0
+
+#__________
+
+tab_3 <- base_fluxo %>% 
+  filter(validacao_horario == 1,
+         Validacao_Dia %in% c("6-Não","7-Sim"),
+         ANO == 2016,
+         ANO_SEM %in% vetor)
+
+tab_3 %<>% 
+  group_by(COD_FILIAL,NOM_FILIAL) %>% 
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL), 
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL), 
+            HOR_PROCESSAMENTO = n())
+
+tab_3$QTD_CLIENTE_ATUAL <- as.numeric(tab_3$QTD_CLIENTE_ATUAL)
+tab_3$QTD_CUPOM_ATUAL <- as.numeric(tab_3$QTD_CUPOM_ATUAL)
+tab_3$HOR_PROCESSAMENTO <- as.numeric(tab_3$HOR_PROCESSAMENTO)
+tab_3 <- as.data.frame(tab_3)
+tab_3 %<>% mutate("Cupons/Hora" = tab_3$QTD_CUPOM_ATUAL/tab_3$HOR_PROCESSAMENTO, 
+                  "Conversao" = QTD_CUPOM_ATUAL / QTD_CLIENTE_ATUAL)
+tab_3[tab_3 == "Inf"] <- 0
+tab_3[tab_3 == "NaN"] <- 0
+
+#__________
+
+tab_4 <- base_fluxo %>% 
+  filter(validacao_horario == 1,
+         Validacao_Dia %in% c("6-Não","7-Sim"),
+         ANO == 2017,
+         ANO_SEM %in% vetor2)
+
+tab_4 %<>% 
+  group_by(COD_FILIAL,NOM_FILIAL) %>% 
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL), 
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL), 
+            HOR_PROCESSAMENTO = n())
+
+tab_4$QTD_CLIENTE_ATUAL <- as.numeric(tab_4$QTD_CLIENTE_ATUAL)
+tab_4$QTD_CUPOM_ATUAL <- as.numeric(tab_4$QTD_CUPOM_ATUAL)
+tab_4$HOR_PROCESSAMENTO <- as.numeric(tab_4$HOR_PROCESSAMENTO)
+tab_4 <- as.data.frame(tab_4)
+tab_4 %<>% mutate("Cupons/Hora" = tab_4$QTD_CUPOM_ATUAL/tab_4$HOR_PROCESSAMENTO, 
+                  "Conversao" = QTD_CUPOM_ATUAL / QTD_CLIENTE_ATUAL)
+tab_4[tab_4 == "Inf"] <- 0
+tab_4[tab_4 == "NaN"] <- 0
+
+TOTAIS_DE_HORA = sum(tab_3$HOR_PROCESSAMENTO) + sum(tab_4$HOR_PROCESSAMENTO)
+HORAS_VALIDAS = sum(tab_1$HOR_PROCESSAMENTO) + sum(tab_2$HOR_PROCESSAMENTO)
+
+#__________
+
+base_cupons_real_antigo %<>% mutate(ano_semana = paste0(Ano,"-",Semana))
+base_cupons_real_antigo %<>% arrange(desc(base_cupons_real_antigo$ano_semana)) 
+base_cupons_real_antigo %<>% group_by(ano_semana,Ano,Semana) %>% summarise(PRESENCA = sum(PRESENCA))
+
+base_cupons_real %<>% mutate(ano_semana = paste0(Ano,"-",Semana)) 
+base_cupons_real %<>% group_by(ano_semana, Ano, Semana) %>% summarise(PRESENCA = sum(PRESENCA))
+
+base_cupons_real_antigo[nrow(base_cupons_real_antigo)+1,] <- base_cupons_real
+
+#__________
+
+tab_5 <- base_fluxo %>% 
+  filter(PCT_ATUAL == 100,
+         validacao_horario == 1,
+         quartil == 1,
+         Validacao_Dia %in% c("6-Não","7-Sim"),
+         ANO == 2016)
+
+tab_5 %<>% 
+  group_by(ano_semana = ANO_SEM) %>% 
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL), 
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL), 
+            HOR_PROCESSAMENTO = n())
+
+tab_5$QTD_CLIENTE_ATUAL <- as.numeric(tab_5$QTD_CLIENTE_ATUAL)
+tab_5$QTD_CUPOM_ATUAL <- as.numeric(tab_5$QTD_CUPOM_ATUAL)
+#tab_5$HOR_PROCESSAMENTO <- as.numeric(tab_5$HOR_PROCESSAMENTO)
+tab_5 <- as.data.frame(tab_5)
+tab_5 %<>% mutate("Conversao" = QTD_CUPOM_ATUAL / QTD_CLIENTE_ATUAL)
+tab_5[tab_5 == "Inf"] <- 0
+tab_5[tab_5 == "NaN"] <- 0
+tab_5 %<>% mutate(Semana = substring(tab_5$ano_semana, 6,7)) 
+
+tab_5 <- left_join(tab_5, ungroup(base_cupons_real_antigo) %>% select(ano_semana,PRESENCA), by = "ano_semana")
+tab_5 <- tab_5[-1,] 
+ 
+#__________
+
+tab_6 <- base_fluxo %>%
+  filter(PCT_ATUAL == 100,
+         validacao_horario == 1,
+         quartil == 1,
+         Validacao_Dia %in% c("6-Não","7-Sim"),
+         ANO == 2017)
+
+tab_6 %<>%
+  group_by(ano_semana = ANO_SEM) %>%
+  summarise(QTD_CLIENTE_ATUAL = sum(QTD_CLIENTE_ATUAL),
+            QTD_CUPOM_ATUAL = sum(QTD_CUPOM_ATUAL),
+            HOR_PROCESSAMENTO = n())
+
+tab_6$QTD_CLIENTE_ATUAL <- as.numeric(tab_6$QTD_CLIENTE_ATUAL)
+tab_6$QTD_CUPOM_ATUAL <- as.numeric(tab_6$QTD_CUPOM_ATUAL)
+tab_6$HOR_PROCESSAMENTO <- as.numeric(tab_6$HOR_PROCESSAMENTO)
+tab_6 <- as.data.frame(tab_6)
+tab_6 %<>% mutate("Cupons/Hora" = tab_6$QTD_CUPOM_ATUAL/tab_6$HOR_PROCESSAMENTO,
+                  "Conversao" = QTD_CUPOM_ATUAL / QTD_CLIENTE_ATUAL)
+tab_6[tab_6 == "Inf"] <- 0
+tab_6[tab_6 == "NaN"] <- 0
+
+tab_6 %<>% mutate(Semana = substring(tab_6$ano_semana, 6,7)) 
+
+tab_6 <- left_join(tab_6, ungroup(base_cupons_real_antigo) %>% select(ano_semana,PRESENCA), by = "ano_semana")
+
+#__________
+
+# parte final da tab_6
+a <- tab_5 %>% select(ano_semana, Conversao, PRESENCA) %>% mutate(semana = substr(ano_semana,6,7))
+b <- tab_6 %>% select(ano_semana, Conversao, PRESENCA) %>%  mutate(semana = substr(ano_semana,6,7))
+tab_teste <- left_join(a,b,by="semana")
+tab_teste %<>%  mutate(CLIENTE_2016 = PRESENCA.x/Conversao.x, CLIENTE_2017 = PRESENCA.y/Conversao.y)
+ttt <- tab_teste[1:nrow(b)-1,]
+
+#__________
+
+# tabela_colorida <- tab_2[,1:2]
+# tabela_colorida <- left_join(tabela_colorida, regiao_loja, by = "COD_FILIAL")
+# 
+# # oq encontrou no procv com abertura loja / cliente
+# # procura se tem o cod na tab_1 e retorna a conversão
+# 
+# tabela_colorida <- left_join(tabela_colorida, tab_1 %>% select(COD_FILIAL, Conversao), by = "COD_FILIAL")
+# 
+# #tabela_colorida <- left_join(tabela_colorida, tab_1, by = "COD_FILIAL")
