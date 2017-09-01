@@ -4,6 +4,9 @@ library(magrittr)
 library(RODBC)
 library(dplyr)
 library(glue)
+library(readxl)
+library(DT)
+library(janitor)
 
 ## parametros do codigo
 q1 <- 0.3
@@ -30,11 +33,11 @@ base_fluxo <- na.omit(base_fluxo) # tem NA (filial 238 e 226 não existem mais)
 
 base_fluxo %<>% mutate(
   validacao_horario = ifelse(HOR_PROCESSAMENTO >= Hora.Ab. & HOR_PROCESSAMENTO <= Hora.Fech., 1, 0)
-  )
+)
 
 #quartil no final 
 
-tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
+tipo_de_loja <- tipo_de_loja_base
 tipo_de_loja <- select(tipo_de_loja,COD_FILIAL, X.1)
 tipo_de_loja <- tipo_de_loja[-1:-3,]
 tipo_de_loja <- as.data.frame(tipo_de_loja)
@@ -45,7 +48,7 @@ base_fluxo <- left_join(base_fluxo, tipo_de_loja, by = "COD_FILIAL")
 
 base_fluxo %<>% mutate(
   ATINGIMENTO = base_fluxo$QTD_CUPOM_ATUAL / base_fluxo$QTD_CLIENTE_ATUAL
-  )
+)
 
 # não é para omitir e sim para botar vazio ou 0
 # filter(base_fluxo, base_fluxo$ATINGIMENTO == "Inf")
@@ -54,7 +57,7 @@ base_fluxo %<>% mutate(
 base_fluxo[base_fluxo == "Inf"] <- 0
 base_fluxo[base_fluxo == "NaN"] <- 0
 
-tipo_de_loja <- read.csv2("/home/sayuritakeda/Romulo/TIPO_DE_LOJA.csv", fileEncoding = "ISO-8859-1")
+tipo_de_loja <- tipo_de_loja_base
 tipo_de_loja <- select(tipo_de_loja,COD_FILIAL, X.2)
 tipo_de_loja <- tipo_de_loja[-1:-3,]
 tipo_de_loja <- as.data.frame(tipo_de_loja)
@@ -79,8 +82,8 @@ base_fluxo %<>% mutate(Validacao_Dia = paste0(Quantidade_de_Dias,"-",Abre_doming
 
 # se estiver entre o quartil 1 e 3 insere 1, caso contrário 0  
 base_fluxo %<>% mutate(
- quartil = ifelse(ATINGIMENTO >= round(quantile(base_fluxo$ATINGIMENTO,q1),2) & 
-                  ATINGIMENTO <= round(quantile(base_fluxo$ATINGIMENTO,q3),2), 1, 0)
+  quartil = ifelse(ATINGIMENTO >= round(quantile(base_fluxo$ATINGIMENTO,q1),2) & 
+                     ATINGIMENTO <= round(quantile(base_fluxo$ATINGIMENTO,q3),2), 1, 0)
 )
 
 ########### TD-LOJA ###########
@@ -183,14 +186,8 @@ HORAS_VALIDAS = sum(tab_1$HOR_PROCESSAMENTO) + sum(tab_2$HOR_PROCESSAMENTO)
 
 #__________
 
-base_cupons_real_antigo %<>% mutate(ano_semana = paste0(Ano,"-",Semana))
-base_cupons_real_antigo %<>% arrange(desc(base_cupons_real_antigo$ano_semana)) 
-base_cupons_real_antigo %<>% group_by(ano_semana,Ano,Semana) %>% summarise(PRESENCA = sum(PRESENCA))
-
-base_cupons_real %<>% mutate(ano_semana = paste0(Ano,"-",Semana)) 
-base_cupons_real %<>% group_by(ano_semana, Ano, Semana) %>% summarise(PRESENCA = sum(PRESENCA))
-
-base_cupons_real_antigo[nrow(base_cupons_real_antigo)+1,] <- base_cupons_real
+base_cupons_real_alterado <- mutate(base_cupons_real, ano_semana = paste0(Ano,"-",Semana))
+base_cupons_real_alterado %<>% group_by(ano_semana,Ano,Semana) %>% summarise(PRESENCA = sum(PRESENCA))
 
 #__________
 
@@ -216,9 +213,11 @@ tab_5[tab_5 == "Inf"] <- 0
 tab_5[tab_5 == "NaN"] <- 0
 tab_5 %<>% mutate(Semana = substring(tab_5$ano_semana, 6,7)) 
 
-tab_5 <- left_join(tab_5, ungroup(base_cupons_real_antigo) %>% select(ano_semana,PRESENCA), by = "ano_semana")
+tab_5 <- left_join(tab_5, 
+                   ungroup(base_cupons_real_alterado) %>% select(ano_semana,PRESENCA), 
+                   by = "ano_semana")
 tab_5 <- tab_5[-1,] 
- 
+
 #__________
 
 tab_6 <- base_fluxo %>%
@@ -245,25 +244,147 @@ tab_6[tab_6 == "NaN"] <- 0
 
 tab_6 %<>% mutate(Semana = substring(tab_6$ano_semana, 6,7)) 
 
-tab_6 <- left_join(tab_6, ungroup(base_cupons_real_antigo) %>% select(ano_semana,PRESENCA), by = "ano_semana")
+tab_6 <- left_join(tab_6, 
+                   ungroup(base_cupons_real_alterado) %>% select(ano_semana,PRESENCA), 
+                   by = "ano_semana")
 
 #__________
 
 # parte final da tab_6
 a <- tab_5 %>% select(ano_semana, Conversao, PRESENCA) %>% mutate(semana = substr(ano_semana,6,7))
 b <- tab_6 %>% select(ano_semana, Conversao, PRESENCA) %>%  mutate(semana = substr(ano_semana,6,7))
-tab_teste <- left_join(a,b,by="semana")
-tab_teste %<>%  mutate(CLIENTE_2016 = PRESENCA.x/Conversao.x, CLIENTE_2017 = PRESENCA.y/Conversao.y)
-ttt <- tab_teste[1:nrow(b)-1,]
+final_tab_6 <- left_join(a,b,by="semana")
+final_tab_6 %<>%  mutate(CLIENTE_2016 = PRESENCA.x/Conversao.x, CLIENTE_2017 = PRESENCA.y/Conversao.y)
+final_tab_6 <- final_tab_6[1:nrow(b)-1,]
 
 #__________
 
-# tabela_colorida <- tab_2[,1:2]
-# tabela_colorida <- left_join(tabela_colorida, regiao_loja, by = "COD_FILIAL")
-# 
-# # oq encontrou no procv com abertura loja / cliente
-# # procura se tem o cod na tab_1 e retorna a conversão
-# 
-# tabela_colorida <- left_join(tabela_colorida, tab_1 %>% select(COD_FILIAL, Conversao), by = "COD_FILIAL")
-# 
-# #tabela_colorida <- left_join(tabela_colorida, tab_1, by = "COD_FILIAL")
+tab_7 <- base_cupons_real %>% 
+  mutate(ano_semana = paste0(Ano, "-", Semana)) %>% 
+  filter(ano_semana %in% vetor)
+tab_7 %<>% group_by(COD_FILIAL, NOM_FILIAL) %>% summarise(presenca = sum(PRESENCA))
+
+#__________
+
+tab_8 <- base_cupons_real %>% 
+  mutate(ano_semana = paste0(Ano, "-", Semana)) %>% 
+  filter(ano_semana %in% vetor2)
+tab_8 %<>%  group_by(COD_FILIAL, NOM_FILIAL) %>% summarise(presenca = sum(PRESENCA))
+
+#__________
+
+# Para criar a tabela colorida na aba TD-LOJA
+
+tipo_de_loja_base_t <- tipo_de_loja_base[-1:-3,] 
+
+for(n in c(1,5,6,7,8,9,10)){
+  tipo_de_loja_base_t[,n] <- as.integer(as.character(tipo_de_loja_base_t[,n]))
+}
+
+tipo_de_loja_base_t %<>% mutate(a = (tipo_de_loja_base_t$X.4-tipo_de_loja_base_t$X.3)*20, 
+                              b = (tipo_de_loja_base_t$X.6-tipo_de_loja_base_t$X.5)*4, 
+                              c = (tipo_de_loja_base_t$X.8-tipo_de_loja_base_t$X.7)*4,
+                              mes_fechado = a + b + c)
+
+abertura_loja <- left_join(abertura_loja, 
+                           tipo_de_loja_base_t %>% select(COD_FILIAL, mes_fechado), 
+                           by = "COD_FILIAL")
+abertura_loja %<>%  mutate(semana_fechada = mes_fechado/4)
+
+
+tab_colorida <- tab_2[,1:2]
+tab_colorida <- left_join(tab_colorida, 
+                          regiao_loja, 
+                          by = "COD_FILIAL")
+
+# fazer para P1
+tab_colorida <- left_join(tab_colorida, 
+                          tab_1 %>% select(COD_FILIAL, `Cupons/Hora`, horas_validas = HOR_PROCESSAMENTO, Conversao), 
+                          by ="COD_FILIAL")
+tab_colorida <- left_join(tab_colorida, 
+                          tab_7 %>% select(COD_FILIAL, cupom = presenca), 
+                          by = "COD_FILIAL")
+tab_colorida %<>% mutate(cliente = cupom / Conversao)
+tab_colorida <- left_join(tab_colorida, 
+                          abertura_loja %>% select(COD_FILIAL, mes_fechado), 
+                          by = "COD_FILIAL")
+tab_colorida %<>% mutate(cliente_hora = cliente/mes_fechado) 
+
+# fazer para P2
+tab_colorida <- left_join(tab_colorida, 
+                          tab_2 %>% select(COD_FILIAL, "Cupons/Hora_2" = `Cupons/Hora`, horas_validas_2 = HOR_PROCESSAMENTO, Conversao_2 = Conversao), 
+                          by ="COD_FILIAL")
+tab_colorida <- left_join(tab_colorida, 
+                          tab_8 %>% select(COD_FILIAL, cupom_2 = presenca), 
+                          by = "COD_FILIAL")
+tab_colorida %<>% mutate(cliente_2 = cupom_2 / Conversao_2)
+tab_colorida %<>% mutate(cliente_hora_2 = cliente_2/mes_fechado) 
+
+tab_colorida %<>% mutate(clien_hora_var = cliente_hora_2 / cliente_hora -1, 
+                         cup_hora_var = `Cupons/Hora_2` / `Cupons/Hora` -1, 
+                         conv_var = (Conversao_2 - Conversao)*100) 
+
+tab_colorida <- tab_colorida[!(is.na(tab_colorida$`Cupons/Hora`) | tab_colorida$`Cupons/Hora`==""), ] 
+
+tab_colorida %<>% 
+  select(-COD_FILIAL, -NOM_FILIAL) %>% 
+  group_by(REGIAO) %>% 
+  summarise_all(sum)
+    
+tab_colorida %<>% select(-Conversao_2, -Conversao, -clien_hora_var, -cup_hora_var, -conv_var) 
+
+tab_colorida %<>% mutate(conv = cupom/cliente, 
+                         conv_2 = cupom_2/cliente_2, 
+                         cliente_hora_var = cliente_hora_2/cliente_hora-1, 
+                         cupons_hora_var = `Cupons/Hora_2`/`Cupons/Hora`-1) 
+tab_colorida %<>% mutate(conv_var = (conv_2 - conv)*100) 
+
+tab_colorida %<>% select(REGIAO, 
+                         cliente_hora, 
+                         `Cupons/Hora`, 
+                         cupom, 
+                         cliente, 
+                         horas_validas, 
+                         conv, 
+                         cliente_hora_2, 
+                         `Cupons/Hora_2`, 
+                         cupom_2, 
+                         cliente_2, 
+                         horas_validas_2, 
+                         conv_2, 
+                         cliente_hora_var, 
+                         cupons_hora_var, 
+                         conv_var)
+
+#datatable(tab_colorida)
+teste = data.frame(REGIAO = "Casa e Vídeo", 
+                   cliente_hora = sum(tab_colorida$cliente_hora), 
+                   `Cupons/Hora` = sum(tab_colorida$`Cupons/Hora`), 
+                   cupom = sum(tab_colorida$cupom), 
+                   cliente = sum(tab_colorida$cliente), 
+                   horas_validas = sum(tab_colorida$horas_validas), 
+                   conv = sum(tab_colorida$cupom)/sum(tab_colorida$cliente), 
+                   cliente_hora_2 = sum(tab_colorida$cliente_hora_2), 
+                   `Cupons/Hora_2` = sum(tab_colorida$`Cupons/Hora_2`), 
+                   cupom_2 = sum(tab_colorida$cupom_2), 
+                   cliente_2 = sum(tab_colorida$cliente_2), 
+                   horas_validas_2 = sum(tab_colorida$horas_validas_2), 
+                   conv_2 = sum(tab_colorida$cupom_2)/sum(tab_colorida$cliente_2), 
+                   cliente_hora_var = sum(tab_colorida$cliente_hora_var), 
+                   cupons_hora_var = sum(tab_colorida$cupons_hora_var), 
+                   conv_var = sum(tab_colorida$conv_var))
+
+# cliente_hora_var = sum(tab_colorida$cliente_hora)/sum(tab_colorida$cliente_hora_2)-1, 
+# cupons_hora_var = sum(tab_colorida$`Cupons/Hora`)/sum(tab_colorida$`Cupons/Hora_2`)-1, 
+# conv_var = (sum(tab_colorida$conv) - sum(tab_colorida$conv_2))*100
+
+teste <- teste %>%  clean_names()
+tab_colorida <- tab_colorida %>% clean_names()
+#names(tab_colorida)
+tab_colorida <- rbind(tab_colorida, teste)
+
+tab_colorida[,2:16] %<>% round(2)
+
+datatable(tab_colorida)
+
+
