@@ -1,4 +1,4 @@
-source("/home/-----------/minhas_funcoes.R")
+source("/home/casaevideo/minhas_funcoes.R")
 library(lubridate)
 library(magrittr)
 library(RODBC)
@@ -7,6 +7,10 @@ library(glue)
 library(readxl)
 library(DT)
 library(janitor)
+library(ggplot2)
+library(plotly)
+# se chamar o data.table não pode chamar o lubridate
+#(ou tem que especificar por conta do label = T)
 
 ## parametros do codigo
 q1 <- 0.3
@@ -14,14 +18,14 @@ q3 <- 0.75
 vetor <- c("2016-32","2016-33","2016-34","2016-35")
 vetor2 <- c("2017-31","2017-32","2017-33","2017-34")
 
-base_fluxo$DAT_OPERACAO <- substring(base_fluxo$DAT_OPERACAO,1,10) # para tirar hora depois de data 
+base_fluxo$DAT_OPERACAO <- substring(base_fluxo$DAT_OPERACAO,1,10) # para tirar hora depois de data
 
-base_fluxo <- base_fluxo %>% 
+base_fluxo %<>%
   mutate(DIAS_SEM = wday(dmy(base_fluxo$DAT_OPERACAO)),
-         DIAS = wday(DIAS_SEM, label = TRUE),
+         DIAS = lubridate::wday(DIAS_SEM, label = TRUE),
          SEM = week(dmy(base_fluxo$DAT_OPERACAO)),
          MES = month(base_fluxo$DAT_OPERACAO),
-         MES2 = month(base_fluxo$DAT_OPERACAO, label = TRUE),
+         MES2 = lubridate::month(base_fluxo$DAT_OPERACAO, label = TRUE),
          ANO = substr(base_fluxo$DAT_OPERACAO,7,10))
 
 base_fluxo <- left_join(base_fluxo, abertura_loja, by = "COD_FILIAL")
@@ -181,7 +185,7 @@ tab_4 %<>% mutate("Cupons/Hora" = tab_4$QTD_CUPOM_ATUAL/tab_4$HOR_PROCESSAMENTO,
 tab_4[tab_4 == "Inf"] <- 0
 tab_4[tab_4 == "NaN"] <- 0
 
-TOTAIS_DE_HORA = sum(tab_3$HOR_PROCESSAMENTO) + sum(tab_4$HOR_PROCESSAMENTO)
+TOTAIS_DE_HORAS = sum(tab_3$HOR_PROCESSAMENTO) + sum(tab_4$HOR_PROCESSAMENTO)
 HORAS_VALIDAS = sum(tab_1$HOR_PROCESSAMENTO) + sum(tab_2$HOR_PROCESSAMENTO)
 
 #__________
@@ -326,65 +330,175 @@ tab_colorida %<>% mutate(clien_hora_var = cliente_hora_2 / cliente_hora -1,
 
 tab_colorida <- tab_colorida[!(is.na(tab_colorida$`Cupons/Hora`) | tab_colorida$`Cupons/Hora`==""), ] 
 
-tab_colorida %<>% 
+#__________
+
+# tab_colorida_resumo tira o cod e loja 
+
+tab_colorida_resumo <- tab_colorida %>%  
   select(-COD_FILIAL, -NOM_FILIAL) %>% 
   group_by(REGIAO) %>% 
   summarise_all(sum)
     
-tab_colorida %<>% select(-Conversao_2, -Conversao, -clien_hora_var, -cup_hora_var, -conv_var) 
+tab_colorida_resumo %<>% select(-Conversao_2, -Conversao, -clien_hora_var, -cup_hora_var, -conv_var) 
 
-tab_colorida %<>% mutate(conv = cupom/cliente, 
+tab_colorida_resumo %<>% mutate(conv = cupom/cliente, 
                          conv_2 = cupom_2/cliente_2, 
                          cliente_hora_var = cliente_hora_2/cliente_hora-1, 
                          cupons_hora_var = `Cupons/Hora_2`/`Cupons/Hora`-1) 
-tab_colorida %<>% mutate(conv_var = (conv_2 - conv)*100) 
+tab_colorida_resumo %<>% mutate(conv_var = (conv_2 - conv)*100) 
 
-tab_colorida %<>% select(REGIAO, 
-                         cliente_hora, 
-                         `Cupons/Hora`, 
-                         cupom, 
-                         cliente, 
-                         horas_validas, 
-                         conv, 
-                         cliente_hora_2, 
-                         `Cupons/Hora_2`, 
-                         cupom_2, 
-                         cliente_2, 
-                         horas_validas_2, 
-                         conv_2, 
-                         cliente_hora_var, 
-                         cupons_hora_var, 
+tab_colorida_resumo %<>% select(REGIAO, cliente_hora, `Cupons/Hora`, 
+                         cupom, cliente, horas_validas, 
+                         conv, cliente_hora_2, `Cupons/Hora_2`, 
+                         cupom_2, cliente_2, horas_validas_2, 
+                         conv_2, cliente_hora_var, cupons_hora_var, 
                          conv_var)
 
-#datatable(tab_colorida)
+#datatable(tab_colorida_resumo)
 teste = data.frame(REGIAO = "Casa e Vídeo", 
-                   cliente_hora = sum(tab_colorida$cliente_hora), 
-                   `Cupons/Hora` = sum(tab_colorida$`Cupons/Hora`), 
-                   cupom = sum(tab_colorida$cupom), 
-                   cliente = sum(tab_colorida$cliente), 
-                   horas_validas = sum(tab_colorida$horas_validas), 
-                   conv = sum(tab_colorida$cupom)/sum(tab_colorida$cliente), 
-                   cliente_hora_2 = sum(tab_colorida$cliente_hora_2), 
-                   `Cupons/Hora_2` = sum(tab_colorida$`Cupons/Hora_2`), 
-                   cupom_2 = sum(tab_colorida$cupom_2), 
-                   cliente_2 = sum(tab_colorida$cliente_2), 
-                   horas_validas_2 = sum(tab_colorida$horas_validas_2), 
-                   conv_2 = sum(tab_colorida$cupom_2)/sum(tab_colorida$cliente_2), 
-                   cliente_hora_var = sum(tab_colorida$cliente_hora_var), 
-                   cupons_hora_var = sum(tab_colorida$cupons_hora_var), 
-                   conv_var = sum(tab_colorida$conv_var))
+                   cliente_hora = sum(tab_colorida_resumo$cliente_hora), 
+                   `Cupons/Hora` = sum(tab_colorida_resumo$`Cupons/Hora`), 
+                   cupom = sum(tab_colorida_resumo$cupom), 
+                   cliente = sum(tab_colorida_resumo$cliente), 
+                   horas_validas = sum(tab_colorida_resumo$horas_validas), 
+                   conv = sum(tab_colorida_resumo$cupom)/sum(tab_colorida_resumo$cliente), 
+                   cliente_hora_2 = sum(tab_colorida_resumo$cliente_hora_2), 
+                   `Cupons/Hora_2` = sum(tab_colorida_resumo$`Cupons/Hora_2`), 
+                   cupom_2 = sum(tab_colorida_resumo$cupom_2), 
+                   cliente_2 = sum(tab_colorida_resumo$cliente_2), 
+                   horas_validas_2 = sum(tab_colorida_resumo$horas_validas_2), 
+                   conv_2 = sum(tab_colorida_resumo$cupom_2)/sum(tab_colorida_resumo$cliente_2), 
+                   cliente_hora_var = sum(tab_colorida_resumo$cliente)/sum(tab_colorida_resumo$cliente_2)-1, 
+                   cupons_hora_var = sum(tab_colorida_resumo$cupons_hora_var), 
+                   conv_var = (sum(tab_colorida_resumo$conv) - sum(tab_colorida_resumo$conv_2))*100)
 
-# cliente_hora_var = sum(tab_colorida$cliente_hora)/sum(tab_colorida$cliente_hora_2)-1, 
-# cupons_hora_var = sum(tab_colorida$`Cupons/Hora`)/sum(tab_colorida$`Cupons/Hora_2`)-1, 
-# conv_var = (sum(tab_colorida$conv) - sum(tab_colorida$conv_2))*100
+# cliente_hora_var = sum(tab_colorida_resumo$cliente_hora)/sum(tab_colorida_resumo$cliente_hora_2)-1, 
+# cupons_hora_var = sum(tab_colorida_resumo$`Cupons/Hora`)/sum(tab_colorida_resumo$`Cupons/Hora_2`)-1, 
+# conv_var = (sum(tab_colorida_resumo$conv) - sum(tab_colorida_resumo$conv_2))*100
 
 teste <- teste %>%  clean_names()
-tab_colorida <- tab_colorida %>% clean_names()
-#names(tab_colorida)
-tab_colorida <- rbind(tab_colorida, teste)
+tab_colorida_resumo <- tab_colorida_resumo %>% clean_names()
+#names(tab_colorida_resumo)
+tab_colorida_resumo <- rbind(tab_colorida_resumo, teste)
 
-tab_colorida[,2:16] %<>% round(2)
+tab_colorida_resumo[,2:16] %<>% round(2)
+
+tab_col_1 <- datatable(tab_colorida_resumo[,1:7], options = list(
+  initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+    "}")
+))
+tab_col_2 <- datatable(tab_colorida_resumo[,8:13], options = list(
+  initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+    "}")
+))
+tab_col_3 <- datatable(tab_colorida_resumo[,14:16], options = list(
+  initComplete = JS(
+    "function(settings, json) {",
+    "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+    "}")
+))
+
+#__________
+
+# Ranking
+
+tab_colorida %<>% select(COD_FILIAL,NOM_FILIAL,REGIAO,
+                         cliente,cliente_hora,horas_validas,
+                         Conversao,cliente_2,cliente_hora_2,
+                         horas_validas_2,Conversao_2,clien_hora_var,
+                         conv_var) 
+tab_colorida[,4:13] %<>% round(2)
 
 datatable(tab_colorida)
 
+#__________
 
+# Dashboard 
+
+tab_1_dash <- tab_colorida_resumo %>% select(regiao, cliente, cliente_2, cliente_hora_var)
+tab_2_dash <- tab_colorida_resumo %>% select(regiao, conv, conv_2, conv_var)
+
+#TOTAIS_DE_HORAS (foi criado antes)
+#HORAS_VALIDAS (foi criado antes)
+
+horas_descartadas = TOTAIS_DE_HORAS - HORAS_VALIDAS
+
+horas_descartadas_perc = 1-(HORAS_VALIDAS / TOTAIS_DE_HORAS)
+horas_validas_perc = HORAS_VALIDAS / TOTAIS_DE_HORAS
+
+# Criação do dataframe
+tab_dash_resumo = data.frame(valor = horas_descartadas_perc, nomes = "Descartadas")
+tab_dash_resumo <- rbind(tab_dash_resumo, data.frame(valor = horas_validas_perc, nomes = "Validas"))
+# Criação do gráfico
+g <- ggplot(tab_dash_resumo, aes(tab_dash_resumo$nomes, tab_dash_resumo$valor))
+g + geom_col(fill = "#b3d9ff") +  
+    labs(x = "Horas",y = "%")
+
+
+# Criação do dataframe
+fluxo_cia_presenca = data.frame(valor = presença_de_cupom_p1, nomes = "P1")
+fluxo_cia_presenca <- rbind(fluxo_cia_presenca, data.frame(valor = presença_de_cupom_p2, nomes = "P2"))
+fluxo_cia_presenca %<>% mutate(quant = fluxo_cia_presenca$CuponsTT/sum(fluxo_cia_presenca$CuponsTT)) 
+fluxo_cia_presenca$quant %<>% round(2) 
+# Criação do gráfico
+g <- ggplot(fluxo_cia_presenca, aes(fluxo_cia_presenca$nomes, fluxo_cia_presenca$quant))
+g + geom_col(aes(fill = fluxo_cia_presenca$quant)) +  
+  labs(x = "Período",y = "%") + 
+  geom_text(aes(label = quant, y = quant + 0.10)) +
+  labs(title = "Cupons Casa e Vídeo") + 
+  theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+  scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F)
+  
+
+# Criação do dataframe
+fluxo_cia = data.frame(valor = (presença_de_cupom_p1 / tab_colorida_resumo$conv[nrow(tab_colorida_resumo)]), 
+                       nomes = "P1") 
+fluxo_cia %<>% rbind(data.frame(valor = (presença_de_cupom_p2 / tab_colorida_resumo$conv_2[nrow(tab_colorida_resumo)]),
+                                nomes = "P2"))
+fluxo_cia %<>% mutate(quant = fluxo_cia$CuponsTT/sum(fluxo_cia$CuponsTT)) 
+fluxo_cia$quant %<>% round(2) 
+# Criação do gráfico
+g <- ggplot(fluxo_cia, aes(fluxo_cia$nomes, fluxo_cia$quant))
+g + geom_col(aes(fill = fluxo_cia$quant)) +  
+  labs(x = "Período",y = "%") + 
+  geom_text(aes(label = quant, y = quant + 0.10)) +
+  labs(title = "Fluxo Estimado Casa e Vídeo") + 
+  theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+  scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F)
+
+
+# Criação do dataframe
+fluxo_tab = data.frame(valor = (tab_1_dash$cliente[nrow(tab_1_dash)]), 
+                       nomes = "P1") 
+fluxo_tab %<>% rbind(data.frame(valor = (tab_1_dash$cliente_2[nrow(tab_1_dash)]),
+                                nomes = "P2"))
+fluxo_tab %<>% mutate(quant = fluxo_tab$valor/sum(fluxo_tab$valor)) 
+fluxo_tab$quant %<>% round(2) 
+# Criação do gráfico
+g <- ggplot(fluxo_tab, aes(fluxo_tab$nomes, fluxo_tab$quant))
+g + geom_col(aes(fill = fluxo_tab$quant)) +  
+  labs(x = "Período",y = "%") + 
+  geom_text(aes(label = quant, y = quant + 0.10)) +
+  labs(title = "Fluxo Lojas Observadas") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(panel.background = element_blank()) + 
+  scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F)
+
+
+# Criação do dataframe
+fluxo_tab_2 = data.frame(valor = (tab_2_dash$conv[nrow(tab_2_dash)]), 
+                       nomes = "P1") 
+fluxo_tab_2 %<>% rbind(data.frame(valor = (tab_2_dash$conv_2[nrow(tab_2_dash)]),
+                                nomes = "P2"))
+# Criação do gráfico
+g <- ggplot(fluxo_tab_2, aes(fluxo_tab_2$nomes, fluxo_tab_2$valor))
+g + geom_col(aes(fill = fluxo_tab_2$valor)) +  
+  labs(x = "Período",y = "%") + 
+  geom_text(aes(label = valor, y = valor + 0.05)) +
+  labs(title = "Conversão Lojas Observadas") + 
+  theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+  scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F)
