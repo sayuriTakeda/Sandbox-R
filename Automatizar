@@ -1,4 +1,4 @@
-source("/home/casaevideo/minhas_funcoes.R")
+source("/home/---------------/minhas_funcoes.R")
 library(lubridate)
 library(magrittr)
 library(RODBC)
