@@ -1,4 +1,4 @@
-source("/home/---------------/minhas_funcoes.R")
+source("/home/---------------------/minhas_funcoes.R")
 library(lubridate)
 library(magrittr)
 library(RODBC)
@@ -9,6 +9,7 @@ library(DT)
 library(janitor)
 library(ggplot2)
 library(plotly)
+library(dygraphs)
 # se chamar o data.table não pode chamar o lubridate
 #(ou tem que especificar por conta do label = T)
 
@@ -457,7 +458,8 @@ g + geom_col(aes(fill = fluxo_cia_presenca$quant)) +
 # Criação do dataframe
 fluxo_cia = data.frame(valor = (presença_de_cupom_p1 / tab_colorida_resumo$conv[nrow(tab_colorida_resumo)]), 
                        nomes = "P1") 
-fluxo_cia %<>% rbind(data.frame(valor = (presença_de_cupom_p2 / tab_colorida_resumo$conv_2[nrow(tab_colorida_resumo)]),
+fluxo_cia %<>% rbind(data.frame(valor = (presença_de_cupom_p2 /
+                                           tab_colorida_resumo$conv_2[nrow(tab_colorida_resumo)]),
                                 nomes = "P2"))
 fluxo_cia %<>% mutate(quant = fluxo_cia$CuponsTT/sum(fluxo_cia$CuponsTT)) 
 fluxo_cia$quant %<>% round(2) 
@@ -502,3 +504,63 @@ g + geom_col(aes(fill = fluxo_tab_2$valor)) +
   labs(title = "Conversão Lojas Observadas") + 
   theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
   scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F)
+
+
+# Criação do dataframe
+a <- tab_1_dash %>% transmute(regiao, p1 = cliente, p2 = cliente_2)
+a %<>% gather(key = período, value = valores, -regiao) %>% filter(regiao != "Casa e Vídeo")
+# Criação do gráfico
+graph <- 
+  a %>% 
+  ggplot(aes(x = regiao, y = valores, fill = período)) + 
+  geom_col(position = "dodge", 
+           aes(text = paste0("região: ", regiao, "\n",  # texto para a tooltip            
+                             "valor: ", valores))) +
+  labs(x = "Região", y = "Quantidade") +
+  labs(title = "Fluxo de Clientes - Regiões") +   # subtitle = "(utilizando base de horas válidas)" não fica
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.x = element_text(angle = 20, hjust = 1),
+        axis.text.y=element_blank(),
+        plot.margin=unit(c(0,0,0,2), "cm"))
+
+ggplotly(graph, tooltip = "text", height = 400, width = 700)
+
+
+tab_graph_ultimo_0 <- data.frame("data" = tab_5$ano_semana, "semana" = tab_5$Semana, 
+                                 "conv_2016" = tab_5$Conversao, "ano_2016" = tab_5$PRESENCA/ tab_5$Conversao)
+tab_graph_ultimo_1 <- data.frame("data" = tab_6$ano_semana,"semana" = tab_6$Semana, 
+                                 "conv_2017" = tab_6$Conversao, "ano_2017" = tab_6$PRESENCA/tab_6$Conversao)
+tab_graph_ultimo_final <- left_join(tab_graph_ultimo_1 %>% select(semana,conv_2017,ano_2017), 
+                                    tab_graph_ultimo_0 %>% select(semana,conv_2016,ano_2016), 
+                                    by = "semana") %>% na.omit()
+
+tab_graph_ultimo_final_gather <- 
+  tab_graph_ultimo_final %>% 
+  gather(cliente_valor, valor, starts_with("ano_"))
+
+tab_graph_ultimo_final_gather$valor %<>% round()
+
+graph <- 
+  tab_graph_ultimo_final_gather %>% 
+  ggplot(aes(x = semana, y = valor, fill = cliente_valor)) + 
+  geom_col(position = "dodge", 
+           aes(text = paste0("semana: ", semana, "\n", "valor: ", valor))) +
+  labs(x = "Semanas", y = "Quantidade") +
+  labs(title = "Evolutivo Semanas - Casa e Vídeo") +
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.text.y=element_blank(),
+        plot.margin=unit(c(0,0,1,1), "cm"))
+
+ggplotly(graph, tooltip = "text", height = 400, width = 900)
+
+
+
+ggplot(tab_graph_ultimo_final, aes(semana, group = 1)) + 
+  geom_line(aes(y = conv_2016, colour = "2016")) + 
+  geom_line(aes(y = conv_2017, colour = "2017")) +
+  scale_y_continuous(limits = c(0, 0.3)) +
+  ylab("") + 
+  labs(title = "Conversão", subtitle = "(qtd cupom / qtd cliente)") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+  
+
