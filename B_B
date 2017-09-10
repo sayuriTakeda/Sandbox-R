@@ -1,0 +1,143 @@
+# library(shiny)
+# library(shinydashboard)
+# library(shinythemes)
+# library(DT)
+# library(ggplot2)
+# library(plotly)
+# library(rhandsontable)
+# library(dplyr)
+# library(lubridate)
+
+source("setup.R")
+#source("projeto.R") 
+
+rate <- round(horas_validas_perc,2) *100
+
+ui <- dashboardPage(
+  dashboardHeader(title = "Fluxo de Clientes", titleWidth = 200), # titleWidth = 200 pq o dashboardSidebar está com 200
+  dashboardSidebar(width = 200,
+                   dateRangeInput("dates", h4("Período")),
+                   sidebarMenu(
+                     menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard")),
+                     menuItem("Tabela", tabName = "tabela", icon = icon("th")),
+                     menuItem("Tabela 2", tabName = "tabela_2", icon = icon("th"))
+                   )),
+  dashboardBody(
+    # para alterar o tamanho do dashboardHeader
+    tags$head(tags$style(HTML('   
+      .main-header .logo {
+                              font-family: "Georgia", Times, "Times New Roman", serif; 
+                              font-weight: bold;
+                              font-size: 12px;
+                              }
+                              '))),
+    
+    tabItems(                                             # para as abas 
+      tabItem(tabName = "Dashboard",
+              fluidRow(
+                column(5, offset = 3,box(flexdashboard::gaugeOutput("plt1"),width=12, height = 200,title="Horas Válidas")) # column + offset = 12
+                ),
+              fluidRow(
+                #box("teste", width = 2),                  # dentro do fluidRow ele vai para a coluna ao lado
+                tabBox(id = "tabBox_id_1", width = 7,
+                       tabPanel("bbb",div(dataTableOutput("fluxo"), style = "font-size: 90%; width: 100%")), 
+                       tabPanel("bbb",div(dataTableOutput("conversao"), style = "font-size: 90%; width: 100%"))), 
+                tabBox(id = "tabBox_id_2", width = 5, 
+                       tabPanel("Cupons Casa e Vídeo", plotOutput("cupons_casa_video_graph")),
+                       tabPanel("Fluxo Estimado", plotOutput("fluxo_estimado_graph")), 
+                       tabPanel("Fluxo Lojas Observadas", plotOutput("fluxo_lojas_obs_graph")), 
+                       tabPanel("Conversão", plotOutput("conv_lojas_obs_graph")))
+              ),
+              fluidRow(                                   # tabbox ou box -> height = comprimento / width = largura (12) 
+                tabBox(id = "tabBox_id_3", width = 12, height = 200, 
+                       tabPanel("Fluxo de Clientes - Regiões", plotlyOutput("fluxo_clientes_regioes_graph", height = "250")),
+                       tabPanel("Evolutivo Semanas - Casa e Vídeo", plotlyOutput("evolutivo_semana_casa_video_graph")),
+                       tabPanel("qtd cupons / qtd_clientes", plotOutput("qtd_cupons_qtd_clientes_graph"))
+                       ))),
+      tabItem(tabName = "tabela", icon = icon("th"),
+              sliderInput("rateThreshold", "Warn when rate exceeds",
+                          min = 0, max = 50, value = 3, step = 0.1
+              ),
+              "tabela 1"
+              ),
+      tabItem(tabName = "tabela_2",
+              tableOutput("view")
+              )
+            )
+  )
+)
+
+server <- function(input, output) { 
+  output$cupons_casa_video_graph <- renderPlot(fluxo_cia_presenca %>% 
+                                                 ggplot(aes(fluxo_cia_presenca$nomes, fluxo_cia_presenca$quant)) + 
+                                                 geom_col(aes(fill = fluxo_cia_presenca$quant)) +  
+                                                 labs(x = "Período",y = "%") + 
+                                                 geom_text(aes(label = quant, y = quant + 0.10)) +
+                                                 labs(title = "Cupons Casa e Vídeo") + 
+                                                 theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+                                                 scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F))
+  output$fluxo_estimado_graph <- renderPlot(fluxo_cia %>% 
+                                              ggplot(aes(fluxo_cia$nomes, fluxo_cia$quant))+ 
+                                              geom_col(aes(fill = fluxo_cia$quant)) +  
+                                              labs(x = "Período",y = "%") + 
+                                              geom_text(aes(label = quant, y = quant + 0.10)) +
+                                              labs(title = "Fluxo Estimado Casa e Vídeo") + 
+                                              theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+                                              scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F))
+  output$fluxo_lojas_obs_graph <- renderPlot(fluxo_tab %>% 
+                                               ggplot(aes(fluxo_tab$nomes, fluxo_tab$quant)) + 
+                                               geom_col(aes(fill = fluxo_tab$quant)) +  
+                                               labs(x = "Período",y = "%") + 
+                                               geom_text(aes(label = quant, y = quant + 0.10)) +
+                                               labs(title = "Fluxo Lojas Observadas") + 
+                                               theme(plot.title = element_text(hjust = 0.5)) + 
+                                               theme(panel.background = element_blank()) + 
+                                               scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F))
+  output$conv_lojas_obs_graph <- renderPlot(fluxo_tab_2 %>% 
+                                               ggplot(aes(fluxo_tab_2$nomes, fluxo_tab_2$valor)) + 
+                                               geom_col(aes(fill = fluxo_tab_2$valor)) +  
+                                               labs(x = "Período",y = "%") + 
+                                               geom_text(aes(label = valor, y = valor + 0.05)) +
+                                               labs(title = "Conversão Lojas Observadas") + 
+                                               theme(plot.title = element_text(hjust = 0.5), panel.background = element_blank()) + 
+                                               scale_fill_gradient(low = "#538cc6", high = "#204060", guide = F))
+  output$fluxo_clientes_regioes_graph <- renderPlotly(graph <- 
+                                                        a %>% 
+                                                        ggplot(aes(x = regiao, y = valores, fill = período)) + 
+                                                        geom_col(position = "dodge") +
+                                                        labs(x = "Região", y = "Quantidade") +
+                                                        labs(title = "Fluxo de Clientes - Regiões") +   # subtitle = "(utilizando base de horas válidas)" não fica
+                                                        theme(plot.title = element_text(hjust = 0.5), 
+                                                              axis.text.x = element_text(angle = 20, hjust = 1),
+                                                              axis.text.y=element_blank(),
+                                                              plot.margin=unit(c(0,0,0,2), "cm")))
+  output$evolutivo_semana_casa_video_graph <- renderPlotly(tab_graph_ultimo_final_gather %>% 
+                                                             ggplot(aes(x = semana, y = valor, fill = cliente_valor)) + 
+                                                             geom_col(position = "dodge") +
+                                                             labs(x = "Semanas", y = "Quantidade") +
+                                                             labs(title = "Evolutivo Semanas - Casa e Vídeo") +
+                                                             theme(plot.title = element_text(hjust = 0.5), 
+                                                                   axis.text.y=element_blank(),
+                                                                   plot.margin=unit(c(0,0,1,1), "cm")))
+  output$qtd_cupons_qtd_clientes_graph <- renderPlot(ggplot(tab_graph_ultimo_final, aes(semana, group = 1)) + 
+                                                       geom_line(aes(y = conv_2016, colour = "2016")) + 
+                                                       geom_line(aes(y = conv_2017, colour = "2017")) +
+                                                       scale_y_continuous(limits = c(0, 0.3)) +
+                                                       ylab("") + 
+                                                       labs(title = "Conversão", subtitle = "(qtd cupom / qtd cliente)") +
+                                                       theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)))
+    
+  output$plt1 <- renderGauge({gauge(rate, min = 0, max = 100, symbol = '%', gaugeSectors(
+    success = c(50, 100), warning = c(40, 49), danger = c(0, 39)))})
+  output$fluxo <- renderDataTable(datatable(tab_1_dash, 
+                                            options = list(dom = 't',initComplete = JS("function(settings, json) {",
+                                                                                       "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
+                                                                                       "}"))))
+  output$conversao <- renderDataTable({tab_2_dash}, 
+                                      options = list(dom = 't', initComplete = JS("function(settings, json) {",
+                                                                                  "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
+                                                                                  "}")))
+  output$view <- renderTable({tab_1_dash})
+  }
+
+shinyApp(ui, server)
