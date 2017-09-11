@@ -1,26 +1,18 @@
-# library(shiny)
-# library(shinydashboard)
-# library(shinythemes)
-# library(DT)
-# library(ggplot2)
-# library(plotly)
-# library(rhandsontable)
-# library(dplyr)
-# library(lubridate)
+# setwd("/home/sayuri/back")
+# source("projeto.R")
 
-source("setup.R")
-#source("projeto.R") 
-
+#ano_semana_anterior <- paste0(year(today())-1,"-",week(today()))
 rate <- round(horas_validas_perc,2) *100
 
-ui <- dashboardPage(
+ui <- 
+  dashboardPage(
   dashboardHeader(title = "Fluxo de Clientes", titleWidth = 200), # titleWidth = 200 pq o dashboardSidebar está com 200
   dashboardSidebar(width = 200,
                    dateRangeInput("dates", h4("Período")),
                    sidebarMenu(
                      menuItem("Dashboard", tabName = "Dashboard", icon = icon("dashboard")),
-                     menuItem("Tabela", tabName = "tabela", icon = icon("th")),
-                     menuItem("Tabela 2", tabName = "tabela_2", icon = icon("th"))
+                     menuItem("Tabela Colorida", tabName = "tab_col", icon = icon("th")),
+                     menuItem("Base Fluxo", tabName = "tabela", icon = icon("th"))
                    )),
   dashboardBody(
     # para alterar o tamanho do dashboardHeader
@@ -35,14 +27,12 @@ ui <- dashboardPage(
     tabItems(                                             # para as abas 
       tabItem(tabName = "Dashboard",
               fluidRow(
-                column(5, offset = 3,box(flexdashboard::gaugeOutput("plt1"),width=12, height = 200,title="Horas Válidas")) # column + offset = 12
-                ),
-              fluidRow(
                 #box("teste", width = 2),                  # dentro do fluidRow ele vai para a coluna ao lado
                 tabBox(id = "tabBox_id_1", width = 7,
-                       tabPanel("bbb",div(dataTableOutput("fluxo"), style = "font-size: 90%; width: 100%")), 
-                       tabPanel("bbb",div(dataTableOutput("conversao"), style = "font-size: 90%; width: 100%"))), 
+                       tabPanel("Fluxo de Cliente",div(dataTableOutput("fluxo"), style = "font-size: 90%; width: 100%")), 
+                       tabPanel("Conversão",div(dataTableOutput("conversao"), style = "font-size: 90%; width: 100%"))), 
                 tabBox(id = "tabBox_id_2", width = 5, 
+                       tabPanel(flexdashboard::gaugeOutput("plt1"),width=12, height = 200,title="Horas Válidas"), # column + offset = 12
                        tabPanel("Cupons Casa e Vídeo", plotOutput("cupons_casa_video_graph")),
                        tabPanel("Fluxo Estimado", plotOutput("fluxo_estimado_graph")), 
                        tabPanel("Fluxo Lojas Observadas", plotOutput("fluxo_lojas_obs_graph")), 
@@ -54,20 +44,44 @@ ui <- dashboardPage(
                        tabPanel("Evolutivo Semanas - Casa e Vídeo", plotlyOutput("evolutivo_semana_casa_video_graph")),
                        tabPanel("qtd cupons / qtd_clientes", plotOutput("qtd_cupons_qtd_clientes_graph"))
                        ))),
+      tabItem(tabName = "tab_col",
+              div(style = "font-size: 9px;font-weight: bold",dataTableOutput("tabela_colorida"))
+      ),
       tabItem(tabName = "tabela", icon = icon("th"),
-              sliderInput("rateThreshold", "Warn when rate exceeds",
-                          min = 0, max = 50, value = 3, step = 0.1
-              ),
-              "tabela 1"
-              ),
-      tabItem(tabName = "tabela_2",
-              tableOutput("view")
+              textInput('ano_semana_anterior', "Filtro ano-semana",
+                        paste0(year(today())-1,"-",week(today()))),
+              dataTableOutput("base_fluxo")
               )
             )
   )
 )
 
+
+
+
+
+
 server <- function(input, output) { 
+  output$tabela_colorida <- renderDataTable({
+    datatable(tab_colorida, rownames = F, 
+              # options para colorir o head com css
+              options = list(dom = 't', initComplete = JS("function(settings, json) {",
+                                                          "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
+                                                          "}"))) %>% formatStyle(
+                                                            c('horas_validas','horas_validas_2'),
+                                                            background = styleColorBar(c(tab_colorida$horas_validas, tab_colorida$horas_validas_2), '#c2d1f0'),
+                                                            backgroundSize = '100% 90%',
+                                                            backgroundRepeat = 'no-repeat',
+                                                            backgroundPosition = 'center'
+                                                          )
+  })
+    
+  output$base_fluxo <- renderDataTable({
+      datatable(base_fluxo %>%
+      filter(ANO_SEM == input$'ano_semana_anterior'), options = list(dom = 't', initComplete = JS("function(settings, json) {",
+                                                                                                  "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
+                                                                                                  "}")))
+  })
   output$cupons_casa_video_graph <- renderPlot(fluxo_cia_presenca %>% 
                                                  ggplot(aes(fluxo_cia_presenca$nomes, fluxo_cia_presenca$quant)) + 
                                                  geom_col(aes(fill = fluxo_cia_presenca$quant)) +  
@@ -129,15 +143,18 @@ server <- function(input, output) {
     
   output$plt1 <- renderGauge({gauge(rate, min = 0, max = 100, symbol = '%', gaugeSectors(
     success = c(50, 100), warning = c(40, 49), danger = c(0, 39)))})
-  output$fluxo <- renderDataTable(datatable(tab_1_dash, 
+  output$fluxo <- renderDataTable({
+    tab_1_dash %>% 
+      rename("Região" = "regiao", "Cliente ano passado" = "cliente", "Cliente ano atual" = "cliente_2", "var hora" = "cliente_hora_var")}, 
                                             options = list(dom = 't',initComplete = JS("function(settings, json) {",
                                                                                        "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
-                                                                                       "}"))))
-  output$conversao <- renderDataTable({tab_2_dash}, 
+                                                                                       "}")))
+  output$conversao <- renderDataTable({
+    tab_2_dash %>% 
+      rename("Região" = "regiao", "Conversão ano passado" = "conv", "Conversão ano atual" = "conv_2", "Variação" = "conv_var")}, 
                                       options = list(dom = 't', initComplete = JS("function(settings, json) {",
                                                                                   "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
                                                                                   "}")))
-  output$view <- renderTable({tab_1_dash})
   }
 
 shinyApp(ui, server)
