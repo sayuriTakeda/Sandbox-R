@@ -9,7 +9,7 @@ library(shinythemes)
 library(magrittr)
 library(rhandsontable)
 library(glue)
-source("/home/----------/minhas_funcoes.R")
+source("/home/------------/minhas_funcoes.R")
 
 sem <- semana_atual(FALSE)
 dat <- glue("s{sem}")
@@ -32,7 +32,7 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
                  
                sidebarPanel(
                   
-                 radioButtons("order","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                 radioButtons("order_clecio","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
                               choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
 
                ),
@@ -69,7 +69,7 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
                
                sidebarPanel(
                  
-                 radioButtons("order_2","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                 radioButtons("order_pablo","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
                               choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
                  
                ),
@@ -106,7 +106,7 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
                
                sidebarPanel(
                  
-                 radioButtons("order_3","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                 radioButtons("order_daniel","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
                               choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
                  
                ),
@@ -189,11 +189,13 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
       DF = read.csv(glue("data/base_teste_clecio_{dat}.csv"), stringsAsFactors = FALSE)
       
       # ordenar de acordo com escolha do usuario
-      if (input$order == "rank_venda") {
+      if (input$order_clecio == "rank_venda") {
         DF <- DF %>% arrange(rank_venda)
-      } else if (input$order == "rank_plan") {
+      } else if (input$order_clecio == "rank_plan") {
         DF <- DF %>% arrange(rank_plan)
-      } else {DF <- DF %>% arrange(rank_diff)}
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
       
       
       
@@ -214,11 +216,13 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
       DF = read.csv(glue("data/base_teste_pablo_{dat}.csv"), stringsAsFactors = FALSE)
       
       # ordenar de acordo com escolha do usuario
-      if (input$order == "rank_venda") {
+      if (input$order_pablo == "rank_venda") {
         DF <- DF %>% arrange(rank_venda)
-      } else if (input$order == "rank_plan") {
+      } else if (input$order_pablo == "rank_plan") {
         DF <- DF %>% arrange(rank_plan)
-      } else {DF <- DF %>% arrange(rank_diff)}
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
       
       rhandsontable(DF) %>%
         hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
@@ -235,11 +239,13 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
       DF = read.csv(glue("data/base_teste_daniel_{dat}.csv"), stringsAsFactors = FALSE)
       
       # ordenar de acordo com escolha do usuario
-      if (input$order == "rank_venda") {
+      if (input$order_daniel == "rank_venda") {
         DF <- DF %>% arrange(rank_venda)
-      } else if (input$order == "rank_plan") {
+      } else if (input$order_daniel == "rank_plan") {
         DF <- DF %>% arrange(rank_plan)
-      } else {DF <- DF %>% arrange(rank_diff)}
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
       
       
       rhandsontable(DF) %>%
