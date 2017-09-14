@@ -289,4 +289,3 @@ base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv"))
  }
  
  shinyApp(ui, server)
-    
