@@ -1,4 +1,5 @@
-remove(list = ls())
+# Esse código é automáticamente atualizado após rodarmos o arquivo responsável por criar as bases, 
+# ou seja, precisamos rodar somente o arquivo "Gera_base.R"
 
 library(DT)
 library(RSQLServer)
@@ -7,10 +8,16 @@ library(dplyr)
 library(shinythemes)
 library(magrittr)
 library(rhandsontable)
+library(glue)
+source("/home/casaevideo/minhas_funcoes.R")
 
-base_clecio <- read.csv("/home/sayuritakeda/base_teste_clecio.csv") 
-base_pablo <- read.csv("/home/sayuritakeda/base_teste_pablo.csv") 
-base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv") 
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+base_clecio <- read.csv(glue("data/base_teste_clecio_{dat}.csv")) 
+base_pablo <- read.csv(glue("data/base_teste_pablo_{dat}.csv")) 
+base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv")) 
+
 
   ui <- tagList(
     navbarPage(
@@ -25,8 +32,8 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
                  
                sidebarPanel(
                   
-                 radioButtons("order","Escolha uma ordenação:", choiceNames = list("Venda", "Plan"),
-                              choiceValues = list("rank_venda","rank_plan"))
+                 radioButtons("order_clecio","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
 
                ),
                
@@ -62,8 +69,8 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
                
                sidebarPanel(
                  
-                 radioButtons("order_2","Escolha uma ordenação:", choiceNames = list("Venda", "Plan"),
-                              choiceValues = list("rank_venda","rank_plan"))
+                 radioButtons("order_pablo","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
                  
                ),
                
@@ -90,9 +97,45 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
                  )
                )
       ),
+      tabPanel("Daniel", 
+               sidebarPanel(
+                 
+                 actionButton("saveBtn_3", "save", icon("save"), 
+                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                 width = 2),
+               
+               sidebarPanel(
+                 
+                 radioButtons("order_daniel","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
+                 
+               ),
+               
+               
+               mainPanel(
+                 
+                 width = 10,
+                 
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("table_total_3")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            div(dataTableOutput("table_ok_3"), style = "font-size:70%")
+                            
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            div(dataTableOutput("table_falta_3"), style = "font-size:70%"))
+                 )
+               )
+      )
       
-      tabPanel("Daniel", "This panel is intentionally left blank")
-    )
+      )
   )
   
  server <- function(input, output) {
@@ -106,8 +149,10 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
       input$saveBtn
       table_total = isolate(input$table_total)
       if (!is.null(table_total)) {
-        write.csv(hot_to_r(input$table_total), "/home/sayuritakeda/base_teste_clecio.csv", row.names = FALSE)
-        print("/home/sayuritakeda/base_teste_clecio.csv")
+        write.csv(hot_to_r(input$table_total), 
+                  glue("data/base_teste_clecio_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_clecio_{dat}.csv"))
       }
     })
     
@@ -117,8 +162,23 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
       input$saveBtn_2
       table_total_2 = isolate(input$table_total_2)
       if (!is.null(table_total_2)) {
-        write.csv(hot_to_r(input$table_total_2), "/home/sayuritakeda/base_teste_pablo.csv", row.names = FALSE)
-        print("/home/sayuritakeda/base_teste_pablo.csv")
+        write.csv(hot_to_r(input$table_total_2), 
+                  glue("data/base_teste_pablo_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_pablo_{dat}.csv"))
+      }
+    })
+    
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn_3
+      table_total_3 = isolate(input$table_total_3)
+      if (!is.null(table_total_3)) {
+        write.csv(hot_to_r(input$table_total_3), 
+                  glue("data/base_teste_daniel_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_daniel_{dat}.csv"))
       }
     })
     
@@ -126,37 +186,41 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
     output$table_total = renderRHandsontable({
       
       # importar arquivo
-      DF = read.csv("base_teste_clecio.csv", stringsAsFactors = FALSE)
+      DF = read.csv(glue("data/base_teste_clecio_{dat}.csv"), stringsAsFactors = FALSE)
       
       # ordenar de acordo com escolha do usuario
-      if (input$order == "rank_venda") {
-        DF <- DF %>% arrange(desc(rank_venda))
+      if (input$order_clecio == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_clecio == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
       } else {
-        DF <- DF %>% arrange(desc(rank_plan))
-      }
+        DF <- DF %>% arrange(rank_diff)
+        }
+      
+      
       
       rhandsontable(DF) %>%
         hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
         hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
   Handsontable.TextCell.renderer.apply(this, arguments);
     if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
-      
 
     })
-    
     
     
     output$table_total_2 = renderRHandsontable({
       
       # importar arquivo
-      DF = read.csv("base_teste_pablo.csv", stringsAsFactors = FALSE)
+      DF = read.csv(glue("data/base_teste_pablo_{dat}.csv"), stringsAsFactors = FALSE)
       
       # ordenar de acordo com escolha do usuario
-      if (input$order_2 == "rank_venda") {
-        DF <- DF %>% arrange(desc(rank_venda))
+      if (input$order_pablo == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_pablo == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
       } else {
-        DF <- DF %>% arrange(desc(rank_plan))
-      }
+        DF <- DF %>% arrange(rank_diff)
+        }
       
       rhandsontable(DF) %>%
         hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
@@ -165,6 +229,35 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
     if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
       
     })
+    
+    
+    output$table_total_3 = renderRHandsontable({
+      
+      # importar arquivo
+      DF = read.csv(glue("data/base_teste_daniel_{dat}.csv"), stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order_daniel == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_daniel == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
+      
+      
+      rhandsontable(DF) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+                 Handsontable.TextCell.renderer.apply(this, arguments);
+                 if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
+      
+ })
+    
+    base_clecio <- read.csv(glue("data/base_teste_clecio_{dat}.csv")) 
+    base_pablo <- read.csv(glue("data/base_teste_pablo_{dat}.csv")) 
+    base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv")) 
+    
     
     output$table_ok = renderDataTable({
       filter(base_clecio, Feito == "ok" | Feito == "OK")
@@ -172,6 +265,10 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
     
     output$table_ok_2 = renderDataTable({
       filter(base_pablo, Feito == "ok" | Feito == "OK")
+    })
+    
+    output$table_ok_3 = renderDataTable({
+      filter(base_daniel, Feito == "ok" | Feito == "OK")
     })
   
     
@@ -181,6 +278,10 @@ base_daniel <- read.csv("/home/sayuritakeda/base_teste_daniel.csv")
     
     output$table_falta_2 = renderDataTable(
       filter(base_pablo, Feito != "ok" & Feito != "OK")
+    )
+    
+    output$table_falta_3 = renderDataTable(
+      filter(base_daniel, Feito != "ok" & Feito != "OK")
     )
     
  }
