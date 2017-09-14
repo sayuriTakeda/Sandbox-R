@@ -1,0 +1,298 @@
+### Não tem como filtrar o DT (ele salva sem os ranks e depois não consegue ordenar) ###
+
+# Esse código é automáticamente atualizado após rodarmos o arquivo responsável por criar as bases, 
+# ou seja, precisamos rodar somente o arquivo "Gera_base.R"
+
+library(DT)
+library(RSQLServer)
+library(shiny)
+library(dplyr)
+library(shinythemes)
+library(magrittr)
+library(rhandsontable)
+library(glue)
+source("/home/-----------/minhas_funcoes.R")
+
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+base_clecio <- read.csv(glue("data/base_teste_clecio_{dat}.csv")) 
+base_pablo <- read.csv(glue("data/base_teste_pablo_{dat}.csv")) 
+base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv")) 
+
+
+  ui <- tagList(
+    navbarPage(
+      theme = shinytheme("flatly"), # tema de cores 
+      "Analistas",
+      tabPanel("Clecio", 
+               sidebarPanel(
+                
+                 actionButton("saveBtn", "save", icon("save"), 
+                      style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                   width = 2),
+                 
+               sidebarPanel(
+                  
+                 radioButtons("order_clecio","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
+
+               ),
+               
+               
+               mainPanel(
+                 
+                 width = 10,
+                 
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("table_total")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            div(dataTableOutput("table_ok"), style = "font-size:70%")
+                            
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            div(dataTableOutput("table_falta"), style = "font-size:70%"))
+                 )
+               )
+      ),
+      tabPanel("Pablo", 
+               sidebarPanel(
+                 
+                 actionButton("saveBtn_2", "save", icon("save"), 
+                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                 width = 2),
+               
+               sidebarPanel(
+                 
+                 radioButtons("order_pablo","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
+                 
+               ),
+               
+               
+               mainPanel(
+                 
+                 width = 10,
+                 
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("table_total_2")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            div(dataTableOutput("table_ok_2"), style = "font-size:70%")
+                            
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            div(dataTableOutput("table_falta_2"), style = "font-size:70%"))
+                 )
+               )
+      ),
+      tabPanel("Daniel", 
+               sidebarPanel(
+                 
+                 actionButton("saveBtn_3", "save", icon("save"), 
+                              style="color: #fff; background-color: #001a33; border-color: #00264d"),
+                 width = 2),
+               
+               sidebarPanel(
+                 
+                 radioButtons("order_daniel","Escolha uma ordenação:", choiceNames = list("Venda", "Plan", "Excesso de agendado"),
+                              choiceValues = list("rank_venda","rank_plan", "Excesso_de_agendado"))
+                 
+               ),
+               
+               
+               mainPanel(
+                 
+                 width = 10,
+                 
+                 tabsetPanel(
+                   tabPanel("TUDO",
+                            h4("Table"),
+                            rHandsontableOutput("table_total_3")
+                            
+                   ),
+                   tabPanel("OK", 
+                            h4("Table"),
+                            div(dataTableOutput("table_ok_3"), style = "font-size:70%")
+                            
+                            
+                   ),
+                   tabPanel("FALTA", 
+                            h4("Table"),
+                            div(dataTableOutput("table_falta_3"), style = "font-size:70%"))
+                 )
+               )
+      )
+      
+      )
+  )
+  
+ server <- function(input, output) {
+  
+    
+    fname = tempfile(fileext = ".csv")
+    
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn
+      table_total = isolate(input$table_total)
+      if (!is.null(table_total)) {
+        write.csv(hot_to_r(input$table_total), 
+                  glue("data/base_teste_clecio_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_clecio_{dat}.csv"))
+      }
+    })
+    
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn_2
+      table_total_2 = isolate(input$table_total_2)
+      if (!is.null(table_total_2)) {
+        write.csv(hot_to_r(input$table_total_2), 
+                  glue("data/base_teste_pablo_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_pablo_{dat}.csv"))
+      }
+    })
+    
+    observe({
+      # remove button and isolate to update file automatically
+      # after each table change
+      input$saveBtn_3
+      table_total_3 = isolate(input$table_total_3)
+      if (!is.null(table_total_3)) {
+        write.csv(hot_to_r(input$table_total_3), 
+                  glue("data/base_teste_daniel_{dat}.csv"), 
+                  row.names = FALSE)
+        print(glue("data/base_teste_daniel_{dat}.csv"))
+      }
+    })
+    
+
+    output$table_total = renderRHandsontable({
+      
+      # importar arquivo
+      DF = read.csv(glue("data/base_teste_clecio_{dat}.csv"), stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order_clecio == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_clecio == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
+      
+      
+      
+      rhandsontable(DF %>% select(-VLR_VENDA_REAIS_3_SM,-VAL_PLAN_SOMA_3_SEMANA,
+                                  -DATA_AGENDA,-DIFF_VLR,-rank_venda,-rank_diff,
+                                  -rank_plan,-top_venda,-top_plan)) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.TextCell.renderer.apply(this, arguments);
+    if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
+
+    })
+    
+    
+    output$table_total_2 = renderRHandsontable({
+      
+      # importar arquivo
+      DF = read.csv(glue("data/base_teste_pablo_{dat}.csv"), stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order_pablo == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_pablo == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
+      
+      rhandsontable(DF %>% select(-VLR_VENDA_REAIS_3_SM,-VAL_PLAN_SOMA_3_SEMANA,
+                                  -DATA_AGENDA,-DIFF_VLR,-rank_venda,-rank_diff,
+                                  -rank_plan,-top_venda,-top_plan)) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+  Handsontable.TextCell.renderer.apply(this, arguments);
+    if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
+      
+    })
+    
+    
+    output$table_total_3 = renderRHandsontable({
+      
+      # importar arquivo
+      DF = read.csv(glue("data/base_teste_daniel_{dat}.csv"), stringsAsFactors = FALSE)
+      
+      # ordenar de acordo com escolha do usuario
+      if (input$order_daniel == "rank_venda") {
+        DF <- DF %>% arrange(rank_venda)
+      } else if (input$order_daniel == "rank_plan") {
+        DF <- DF %>% arrange(rank_plan)
+      } else {
+        DF <- DF %>% arrange(rank_diff)
+        }
+      
+      
+      rhandsontable(DF %>% select(-VLR_VENDA_REAIS_3_SM,-VAL_PLAN_SOMA_3_SEMANA,
+                                  -DATA_AGENDA,-DIFF_VLR,-rank_venda,-rank_diff,
+                                  -rank_plan,-top_venda,-top_plan)) %>%
+        hot_table(highlightCol = TRUE, highlightRow = TRUE) %>% 
+        hot_cols(renderer = "function(instance, td, row, col, prop, value, cellProperties) {
+                 Handsontable.TextCell.renderer.apply(this, arguments);
+                 if (value == 'ok' || value == 'OK') td.style.background = 'lightblue';}")
+      
+ })
+    
+    base_clecio <- read.csv(glue("data/base_teste_clecio_{dat}.csv")) 
+    base_pablo <- read.csv(glue("data/base_teste_pablo_{dat}.csv")) 
+    base_daniel <- read.csv(glue("data/base_teste_daniel_{dat}.csv")) 
+    
+    
+    output$table_ok = renderDataTable({
+      filter(base_clecio, Feito == "ok" | Feito == "OK")
+      })
+    
+    output$table_ok_2 = renderDataTable({
+      filter(base_pablo, Feito == "ok" | Feito == "OK")
+    })
+    
+    output$table_ok_3 = renderDataTable({
+      filter(base_daniel, Feito == "ok" | Feito == "OK")
+    })
+  
+    
+    output$table_falta = renderDataTable(
+      filter(base_clecio, Feito != "ok" & Feito != "OK")
+    )
+    
+    output$table_falta_2 = renderDataTable(
+      filter(base_pablo, Feito != "ok" & Feito != "OK")
+    )
+    
+    output$table_falta_3 = renderDataTable(
+      filter(base_daniel, Feito != "ok" & Feito != "OK")
+    )
+    
+ }
+ 
+ shinyApp(ui, server)
+    
