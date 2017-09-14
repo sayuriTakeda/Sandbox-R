@@ -9,7 +9,7 @@ library(shinythemes)
 library(magrittr)
 library(rhandsontable)
 library(glue)
-source("/home/casaevideo/minhas_funcoes.R")
+source("/home/-------------/minhas_funcoes.R")
 
 sem <- semana_atual(FALSE)
 dat <- glue("s{sem}")
