@@ -1,0 +1,151 @@
+# vai entrar na pasta "data" que se encontra onde o arquivo está setado e vai salvar as 
+# planilhas (que serão modificadas) para cada analista 
+
+# basen <- basen[1:8] foi a alteração
+
+remove(list = ls())                                
+
+setwd("/srv/shiny-server/apps/pre_top_wape/")   # tem que setar no mesmo lugar onde a pasta com os
+                                                # arquivos (futuros) e o script (principal) estarao    
+library(RSQLServer)
+library(RODBC)
+library(glue)
+library(dplyr)
+source("/home/---------/minhas_funcoes.R")
+
+sem <- semana_atual(FALSE)
+dat <- glue("s{sem}")
+
+db<- conectar_com_banco("-------") # para base_2 que é diff entre plan e agendado
+
+base_2 <- sqlQuery(db, "SELECT * FROM DBO_PLANCOM.DBO.TB_ALERTA_AGENDADO
+                        WHERE SEMANA_ALERTA = 37")
+
+
+db<- conectar_com_banco("----------")
+
+base <- sqlQuery(db, "SELECT 
+                 COD_SKU
+                 --,B.NOME
+                 ,NOM_SKU
+                 --,VAL_PV
+                 ,COD_CATEGORIA
+                 ,COD_CLASSE_ATUAL
+                 ,ISNULL(SUM(QTD_S_MENOS_1*PV_S_MENOS_1+QTD_S_MENOS_2*PV_S_MENOS_2+QTD_S_MENOS_3*PV_S_MENOS_3),0) AS VLR_VENDA_REAIS_3_SM
+                 ,ISNULL(SUM(QTD_APOSTA_S_MAIS_1*PV_APOSTA_S_MAIS_1+QTD_APOSTA_S_MAIS_2*PV_APOSTA_S_MAIS_2+QTD_APOSTA_S_MAIS_3*PV_APOSTA_S_MAIS_3),0) AS VAL_PLAN_SOMA_3_SEMANA
+                 ,ANALISTA =(CASE 
+                 WHEN COD_CATEGORIA IN ('A1','A2','A3','A4','A6','F1','F2','F3') THEN 'PABLO'
+                 WHEN COD_CATEGORIA IN ('I1','I2','I3','I4','I5','L1','J2','C1','Y1','P1','Y8','O3','K1','K2','N7','N4','Y1') THEN 'DANIEL' 
+                 WHEN COD_CATEGORIA IN ('B2','D1','E1','O1','02','G1','G2','H1','H2','H3','C2') THEN 'CLECIO' 
+                 END)
+                 --,SUM(QTD_S_MENOS_1*PV_S_MENOS_1+QTD_S_MENOS_2*PV_S_MENOS_2+QTD_S_MENOS_3*PV_S_MENOS_3) AS VENDA_REAIS
+                 --,SUM(QTD_APOSTA_S_MAIS_1*PV_APOSTA_S_MAIS_1+QTD_APOSTA_S_MAIS_2*PV_APOSTA_S_MAIS_2+QTD_APOSTA_S_MAIS_3*PV_APOSTA_S_MAIS_3),0) AS VAL_PLAN_SOMA_3_SEMANA
+                 
+                 FROM DBO_BI..TB_VISAO_UNICA A
+                 --INNER JOIN dbo.TB_CONTATOS_COMERCIAL B
+                 --ON B.CAT=A.COD_CATEGORIA
+                 
+                 WHERE COD_CLASSE_ATUAL IN ('A','I')
+                 --AND QTD_APOSTA_S_MAIS_1 NOT IN ('0')
+                 AND QTD_S_MENOS_1 NOT IN ('0')
+                 AND QTD_S_MENOS_2 NOT IN ('0')
+                 AND QTD_S_MENOS_3 NOT IN ('0')
+                 AND COD_CATEGORIA NOT IN ('Z4','M2','N4','Z5','Z2','K3','Y2')
+                 --AND B.NOME IN ('BRUNA VIANA','FABIO LIMA','FERNANDA GIL','LUANA DALE','JOSÉ LEANDRO')
+                 
+                 --AND ETQ_CIA NOT IN ('0')
+                 --AND QTD_APOSTA_S_MAIS_1=0--+QTD_APOSTA_S_MAIS_2 = 0
+                 
+                 GROUP BY
+                 COD_SKU
+                 --,B.NOME
+                 ,NOM_SKU
+                 ,COD_CATEGORIA
+                 ,COD_CLASSE_ATUAL 
+                 ")
+
+
+
+
+base1 <- base %>%
+  ungroup() %>% 
+  filter(ANALISTA == "CLECIO") %>%
+  arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
+  mutate(
+    rank_venda = row_number(),
+    # excluir os planejados dos top 50 vendas
+    VAL_PLAN_SOMA_3_SEMANA = ifelse(rank_venda <= 50, NA,
+                                    VAL_PLAN_SOMA_3_SEMANA)
+  ) %>% 
+  arrange(desc(VAL_PLAN_SOMA_3_SEMANA)) %>% 
+  mutate(rank_plan = row_number()) %>%
+  filter(rank_venda <= 50 | rank_plan <= 20)
+
+base1 <- mutate(base1,Feito = "n")
+base1 <- base1 %>% select(Feito, everything())
+
+base1 <- mutate(base1, 
+                VLR_VENDA_REAIS_3_SM = round(base1$VLR_VENDA_REAIS_3_SM,2),
+                VAL_PLAN_SOMA_3_SEMANA = round(base1$VAL_PLAN_SOMA_3_SEMANA,2))
+
+base1 <- base1[1:8]
+
+write.csv(base1, glue("data/base_teste_clecio_{dat}.csv"), row.names = FALSE)
+
+
+
+
+base2 <- base %>%
+  ungroup() %>% 
+  filter(ANALISTA == "PABLO") %>%
+  arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
+  mutate(
+    rank_venda = row_number(),
+    # excluir os planejados dos top 50 vendas
+    VAL_PLAN_SOMA_3_SEMANA = ifelse(rank_venda <= 50, NA,
+                                    VAL_PLAN_SOMA_3_SEMANA)
+  ) %>% 
+  arrange(desc(VAL_PLAN_SOMA_3_SEMANA)) %>% 
+  mutate(rank_plan = row_number()) %>%
+  filter(rank_venda <= 50 | rank_plan <= 20)
+
+base2 <- mutate(base2,Feito = "n")
+base2 <- base2 %>% select(Feito, everything())
+
+base2 <- mutate(base2, 
+                VLR_VENDA_REAIS_3_SM = round(base2$VLR_VENDA_REAIS_3_SM,2),
+                VAL_PLAN_SOMA_3_SEMANA = round(base2$VAL_PLAN_SOMA_3_SEMANA,2))
+
+base2 <- base2[1:8]
+
+write.csv(base2, glue("data/base_teste_pablo_{dat}.csv"), row.names = F)
+
+
+
+base3 <- base %>%
+  ungroup() %>% 
+  filter(ANALISTA == "DANIEL") %>%
+  arrange(desc(VLR_VENDA_REAIS_3_SM)) %>% 
+  mutate(
+    rank_venda = row_number(),
+    # excluir os planejados dos top 50 vendas
+    VAL_PLAN_SOMA_3_SEMANA = ifelse(rank_venda <= 50, NA,
+                                    VAL_PLAN_SOMA_3_SEMANA)
+  ) %>% 
+  arrange(desc(VAL_PLAN_SOMA_3_SEMANA)) %>% 
+  mutate(rank_plan = row_number()) %>%
+  filter(rank_venda <= 50 | rank_plan <= 20)
+
+base3 <- mutate(base3,Feito = "n")
+base3 <- base3 %>% select(Feito, everything())
+
+base3 <- mutate(base3, 
+                VLR_VENDA_REAIS_3_SM = round(base3$VLR_VENDA_REAIS_3_SM,2),
+                VAL_PLAN_SOMA_3_SEMANA = round(base3$VAL_PLAN_SOMA_3_SEMANA,2))
+
+base3 <- base3[1:8]
+
+write.csv(base3, glue("data/base_teste_daniel_{dat}.csv"), row.names = F)
+
+source("/srv/shiny-server/apps/pre_top_wape/Gera_arquivos.R")
+
