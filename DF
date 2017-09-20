@@ -1,0 +1,9 @@
+df_neg <- df %>% select(ANO_544,SEMANA,NEG,CUPONS_NEG)
+df_neg <- unique(df_neg)
+df_neg <- df_neg[SEMANA < semana_atual()]
+
+df_neg <- df_neg[,.(                                            # agrupa por ano e por neg
+  CUPONS = sum(CUPONS_NEG)
+), by = .(ANO_544, NEG)]
+
+df_neg <- dcast(df_neg, NEG ~ ANO_544, value.var = "CUPONS")    #troca linha por col
