@@ -1,0 +1,146 @@
+---
+title: "Representatividade"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    runtime: shiny
+---
+
+<style>                     
+.navbar {
+  background-color:#336699;
+  border-color:#336699;
+}
+.navbar-brand {
+color:#ffffff!important;
+}
+
+
+</style>   
+
+
+```{r setup, include=FALSE}
+library(magrittr)
+library(stringr)
+library(lubridate)
+library(feather)
+library(tidyverse)
+library(data.table)
+library(DT)
+library(flexdashboard)
+library(formattable)
+df_gm <- readRDS("dados_explor/df_gm.Rds")
+df_cat_neg <- readRDS("dados_explor/df_cat_neg.Rds")
+df_cat_pos <- readRDS("dados_explor/df_cat_pos.Rds")
+df_negocio_neg <- readRDS("dados_explor/df_negocio_neg.Rds")
+df_negocio_pos <- readRDS("dados_explor/df_negocio_pos.Rds")
+df_niv4_filter_neg <- readRDS("dados_explor/df_niv4_filter_neg.Rds")
+df_niv4_filter_pos <- readRDS("dados_explor/df_niv4_filter_pos.Rds")
+```
+
+GM | Categoria
+=====================================
+
+Row
+-------------------------------------
+    
+### Tabela GM
+    
+```{r}
+df_gm %<>% arrange(desc(`var_repr(%)`))
+
+df_gm$`2016_repr(%)` <- as.numeric(df_gm$`2016_repr(%)`)
+df_gm$`2017_repr(%)` <- as.numeric(df_gm$`2017_repr(%)`)
+df_gm$`var_repr(%)` <- as.numeric(df_gm$`var_repr(%)`)
+
+df_gm %<>% mutate(`var(%)` = round(`var(%)`,1), `2016_repr(%)` = round(`2016_repr(%)`,1), `2017_repr(%)` = round(`2017_repr(%)`,1), `var_repr(%)` = round(`var_repr(%)`,1)) 
+
+df_gm %<>% rename('Variação Peças' = 'var(qtd)',
+                  'Var(%)' = 'var(%)',
+                  'Represent. em 2016 (%)' = `2016_repr(%)`, 
+                  'Represent. em 2017 (%)' = `2017_repr(%)`,
+                  'Variação de Represent. em %'  = `var_repr(%)`) 
+
+datatable(df_gm, rownames = F, options = list(dom = 't',initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#336699', 'color': '#fff'});",                                                                                    "}")))
+
+```
+   
+Row {.tabset .tabset-fade}
+-------------------------------------
+    
+### Negativos
+    
+```{r}
+df_cat_neg %<>% rename('Variação Peças' = 'var(qtd)', 
+                  'Represent. em 2016 (%)' = `2016_rep(%)`, 
+                  'Represent. em 2017 (%)' = `2017_rep(%)`,
+                  'Variação de Represent. em %'  = `var_repr(%)`) 
+
+df_cat_neg$'Variação de Represent. em %' <- round(df_cat_neg$'Variação de Represent. em %',2)
+
+datatable(df_cat_neg, rownames = F, options = list(dom = 't',initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#f5f1fe', 'color': '#004466'});",                                                                                    "}")))
+```
+    
+### Positivos
+
+```{r}
+df_cat_pos %<>% rename('Variação peças' = 'var(qtd)', 
+                  'Represent. em 2016 (%)' = `2016_rep(%)`, 
+                  'Represent. em 2017 (%)' = `2017_rep(%)`,
+                  'Variação de Represent. em %'  = `var_repr(%)`)
+
+datatable(df_cat_pos, rownames = F, options = list(dom = 't',initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#f5f1fe', 'color': '#004466'});",                                                                                    "}")))
+```
+
+Negócio | Nível 4
+=====================================
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+    
+### Negocios negativos
+
+Seleção das duas maiores variações negativas de representatividade de negócio dentro das categorias listadas na visão anterior (tab GM | Categoria)
+    
+```{r}
+df_negocio_neg %<>% rename('Variação Peças' = 'var(qtd)', 
+                  'Represent. em 2016 (%)' = `2016_rep(%)`, 
+                  'Represent. em 2017 (%)' = `2017_rep(%)`,
+                  'Variação de Represent. em %'  = `var_repr(%)`)
+
+datatable(df_negocio_neg, rownames = F, options = list(dom = 't',initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#336699', 'color': '#fff'});",                                                                                    "}")))
+```
+    
+### Nível 4
+
+```{r}
+df_niv4_filter_neg %<>% rename('Variação Peças' = 'var(qtd)')
+
+datatable(df_niv4_filter_neg, rownames = F, options = list(initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#f5f1fe', 'color': '#004466'});",                                                                                    "}")))
+```
+
+Row {.tabset .tabset-fade}
+-------------------------------------
+    
+### Negocios positivos
+
+Seleção das duas maiores variações positivas de representatividade de negócio dentro das categorias listadas na visão anterior (tab GM | Categoria)
+
+    
+```{r}
+df_negocio_pos %<>% rename('Variação peças' = 'var(qtd)', 
+                  'Represent. em 2016 (%)' = `2016_rep(%)`, 
+                  'Represent. em 2017 (%)' = `2017_rep(%)`,
+                  'Variação de Represent. em %'  = `var_repr(%)`)
+
+datatable(df_negocio_pos, rownames = F, options = list(dom = 't',initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#336699', 'color': '#fff'});",                                                                                    "}")))
+```
+    
+### Nível 4
+
+```{r}
+df_niv4_filter_pos %<>% rename('Variação Peças' = 'var(qtd)')
+
+datatable(df_niv4_filter_pos, rownames = F, options = list(initComplete = JS("function(settings, json) {",                                                                                   "$(this.api().table().header()).css({'background-color': '#f5f1fe', 'color': '#004466'});",                                                                                    "}")))
+```
