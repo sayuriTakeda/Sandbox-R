@@ -1,0 +1,201 @@
+setwd("/srv/shiny-server/apps/representatividade/gerencial")
+
+library(magrittr)
+library(stringr)
+library(lubridate)
+library(feather)
+library(tidyverse)
+library(data.table)
+library(DT)
+library(formattable)
+library(lubridate)
+source("/home/casaevideo/minhas_funcoes.R")
+
+sem <- semana_atual()
+
+### definir tela do executivo
+df <- read_feather("data/base-tratada.feather")
+df %<>% mutate_at(vars(starts_with("CUPONS")), as.numeric)
+setDT(df)
+
+# df <- df[SEMANA < sem]
+# data_ref_a0 <- floor_date(today(), "week") - 1
+# dara_ref_a0
+
+ano_atual <- seq(as.Date(floor_date(today()-28,"week")), by = "week", length.out = 4) # para esse ano
+ano_passado <- seq(as.Date(floor_date(today()-365-28-7,"week")), by = "week", length.out = 4) # para o ano passado (está errado)
+df <- df[DATA_SEMANA %in% c(ano_passado,ano_atual)] # para pegar 4 semanas 
+#unique(df$DATA_SEMANA)
+
+#df <- df[SEMANA %in% c(sem, sem-1, sem-2, sem-3)] # para pegar 4 semanas 
+#unique(df$DATA_SEMANA)
+
+# retirar produtos sem GM
+df <- df[GM != "NÃO INFORMADO"]
+# filtrar até ano-1:
+df <- df[ANO_544 >= max(ANO_544) - 1]
+
+## Visão CIA
+df_cia <- df[, c("ANO_544", "SEMANA", "CUPONS_CIA")]
+df_cia <- unique(df_cia)
+df_cia <- df_cia[, .(CUPONS_CIA = sum(CUPONS_CIA)), by = ANO_544]
+
+
+## Visão GM
+df_gm <- df[, c("ANO_544", "SEMANA", "GM", "CUPONS_GM")]
+df_gm <- unique(df_gm)
+
+df_gm <- df_gm[,.(
+  CUPONS = sum(CUPONS_GM)
+), by = .(ANO_544, GM)]
+
+
+df_gm <- dcast(df_gm, GM ~ ANO_544, value.var = "CUPONS")
+df_gm
+
+df_gm %<>% mutate("var(qtd)" = `2017` - `2016`)
+df_gm %<>% mutate("var(%)" = (`2017` / `2016`-1))
+df_gm$`var(%)` <- round((df_gm$`var(%)`*100),2)
+
+teste = data.frame(GM = "CASA & VIDEO",
+                   "2016" = df_cia$CUPONS_CIA[1],
+                   "2017" = df_cia$CUPONS_CIA[2])
+teste %<>% rename("2016" = X2016, "2017" = X2017)
+
+teste %<>% mutate('var(qtd)' = `2017` - `2016`, 'var(%)' = `2017`/`2016`-1) 
+df_gm <- rbind(df_gm, teste)
+
+
+df_gm %<>% mutate('2016_repr(%)' = (`2016`/df_gm$`2016`[nrow(df_gm)])*100, 
+                 '2017_repr(%)' = (`2017`/df_gm$`2017`[nrow(df_gm)])*100)
+
+df_gm$'var_repr(%)' <- df_gm$`2017_repr(%)` - df_gm$`2016_repr(%)`
+
+df_gm[5:8] <- round(df_gm[5:ncol(df_gm)],2)
+
+df_gm$`2016_repr(%)`[nrow(df_gm)] <- ""
+df_gm$`2017_repr(%)`[nrow(df_gm)] <- ""
+df_gm$`var_repr(%)`[nrow(df_gm)] <- ""
+
+# df_gm[is.na(df_gm)] <- ""
+
+df_gm %>% saveRDS("dados_explor/df_gm.Rds")
+
+## Visão Categorias
+df_cat <- df %>% select(ANO_544,SEMANA,CAT,CUPONS_CAT)
+df_cat <- unique(df_cat)
+
+df_cat <- df_cat[,.(
+  CUPONS = sum(CUPONS_CAT)
+), by = .(ANO_544, CAT)]
+
+df_cat <- dcast(df_cat, CAT ~ ANO_544, value.var = "CUPONS") #troca linha por col
+df_cat %<>% mutate("var(qtd)" = `2017` - `2016`)
+
+conc = data.frame(CAT = "CASA & VIDEO",
+                   "2016" = df_cia$CUPONS_CIA[1],
+                   "2017" = df_cia$CUPONS_CIA[2])
+conc %<>% rename("2016" = X2016, "2017" = X2017)
+conc$'var(qtd)' <- conc$`2017` - conc$`2016`  
+
+df_cat <- rbind(df_cat, conc)
+
+df_cat %<>% mutate('2016_rep(%)' = round(((`2016`/ `2016`[nrow(df_cat)])*100),2))
+df_cat %<>% mutate('2017_rep(%)' = round(((`2017`/ `2017`[nrow(df_cat)])*100),2))
+df_cat$'var_repr(%)' <- df_cat$`2017_rep(%)` - df_cat$`2016_rep(%)`
+
+df_cat$`2016_rep(%)`[nrow(df_cat)] <- NA
+df_cat$`2017_rep(%)`[nrow(df_cat)] <- NA
+df_cat$`var_repr(%)`[nrow(df_cat)] <- NA
+
+#df_cat[is.na(df_cat)] <- ""
+
+df_cat_neg <- df_cat %>% filter(`var_repr(%)` < 0) # não pega os NA's
+df_cat_neg %<>% arrange(`var_repr(%)`)
+df_cat_neg <- df_cat_neg[1:5,]
+df_cat_neg %>% saveRDS("dados_explor/df_cat_neg.Rds")
+
+df_cat_pos <- df_cat %>% filter(`var_repr(%)` > 0)
+df_cat_pos %<>% arrange(desc(`var_repr(%)`))
+df_cat_pos %<>% top_n(5, wt = `var_repr(%)`) # ele já pega as n maiores mas não fica ordenado 
+df_cat_pos %>% saveRDS("dados_explor/df_cat_pos.Rds")
+
+## Visão Negócio
+df_neg <- df %>% select(ANO_544,SEMANA,NEG,CAT,CUPONS_NEG)
+df_neg <- unique(df_neg)
+
+df_neg <- df_neg[,.(
+  CUPONS = sum(CUPONS_NEG)
+), by = .(ANO_544, NEG, CAT)]
+
+df_neg <- dcast(df_neg, NEG + CAT ~ ANO_544, value.var = "CUPONS") #troca linha por col
+
+df_neg$'var(qtd)' <- df_neg$`2017` - df_neg$`2016`
+
+# conc = data.frame(NEG = "CASA & VIDEO",
+#                   CAT = "",
+#                   "2016" = df_cia$CUPONS_CIA[1],
+#                   "2017" = df_cia$CUPONS_CIA[2])
+# conc %<>% rename("2016" = X2016, "2017" = X2017)
+# conc$`var(qtd)` = conc$`2017`-conc$`2016`
+# 
+# df_neg <- rbind(df_neg, conc)
+
+df_neg %<>% mutate('2016_rep(%)' = round(((`2016`/ df_cia$CUPONS_CIA[1])*100),2))
+df_neg %<>% mutate('2017_rep(%)' = round(((`2017`/ df_cia$CUPONS_CIA[2])*100),2))
+df_neg$'var_repr(%)' <- df_neg$`2017_rep(%)` - df_neg$`2016_rep(%)`
+
+# NEGATIVOS
+df_neg_neg <- df_neg %>% filter(`var_repr(%)` < 0) # não pega os NA's
+
+# filtrar 2 unidades para cada cat
+teste1 <- data_frame()
+for(n in 1:5){
+  t = df_neg_neg %>% filter(CAT == df_cat_neg[n,1]) %>% arrange(`var_repr(%)`)
+  teste1 <- rbind(teste1,t[1:2,])
+  }
+
+teste1 %>% saveRDS("dados_explor/df_negocio_neg.Rds")
+
+
+# POSITIVOS
+df_neg_pos <- df_neg %>% filter(`var_repr(%)` > 0)
+
+# filtrar 2 unidades para cada cat
+teste2 <- data_frame()
+for(n in 1:5){
+  t = df_neg_pos %>% filter(CAT == df_cat_pos[n,1]) %>% arrange(`var_repr(%)`)
+  teste2 <- rbind(teste2,t[1:2,])
+}
+
+teste2 %>% saveRDS("dados_explor/df_negocio_pos.Rds")
+
+
+## Visão NIV4
+df_niv4 <- df %>% select(ANO_544,SEMANA,NEG,NIV4,CUPONS_NIV4)
+df_niv4 <- unique(df_niv4)
+
+df_niv4 <- df_niv4[,.(
+  CUPONS = sum(CUPONS_NIV4)
+), by = .(ANO_544, NEG,NIV4)]
+
+###### tem que filtrar negocio antes
+teste1$NEG <- as.character(teste1$NEG)
+df_niv4_filter <- df_niv4 %>% filter(NEG %in% c(teste1[,1]))               # filtra neg
+
+df_niv4_filter <- dcast(df_niv4_filter, NIV4 ~ ANO_544, value.var = "CUPONS") # troca linha por col
+df_niv4_filter %<>% mutate('var(qtd)' = `2017` - `2016`)                      # cria a var(qtd)
+
+df_niv4_filter %<>% arrange(`var(qtd)`)
+df_niv4_filter %>% saveRDS("dados_explor/df_niv4_filter_neg.Rds")
+
+###### tem que filtrar negocio antes
+teste2$NEG <- as.character(teste2$NEG)
+df_niv4_filter <- df_niv4 %>% filter(NEG %in% c(teste2[,1]))               # filtra neg
+
+df_niv4_filter <- dcast(df_niv4_filter, NIV4 ~ ANO_544, value.var = "CUPONS") # troca linha por col
+df_niv4_filter %<>% mutate('var(qtd)' = `2017` - `2016`)                      # cria a var(qtd)
+
+df_niv4_filter %<>% arrange(`var(qtd)`)
+df_niv4_filter %>% saveRDS("dados_explor/df_niv4_filter_pos.Rds")
+
