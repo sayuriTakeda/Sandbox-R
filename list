@@ -1,0 +1,18 @@
+lista_cpfs <- vector("list", length = 7)
+
+for(n in 2:7){                      # 2 = agosto e 7 = março
+  st <- as.Date(today())
+  vetor_datas <- seq(st,by = "-1 month", length.out = n)
+  min_vetor_datas <- min(vetor_datas)
+  filtro_clientes_6_inicio <- floor_date(min_vetor_datas, "month")
+  filtro_clientes_6_fim <- ceiling_date(min_vetor_datas, "month")-1
+
+  cpf_filtro_comp_n <- con %>%
+    tbl("TB_CRM_AGG_CUPOM") %>%
+    filter(DAT_OPERACAO_FISCAL >= filtro_clientes_6_inicio & DAT_OPERACAO_FISCAL <= filtro_clientes_6_fim) %>%
+    distinct(NUM_CPF) %>%
+    collect()
+
+  lista_cpfs[[n]] <- cpf_filtro_comp_n$NUM_CPF
+}
+names(lista_cpfs) <- paste0("M", 1:7)
