@@ -1,3 +1,5 @@
 base_total_resumo <- base_total %>% count(CLUSTER_MES.x, CLUSTER_MES.y)
 
 teste <- base_total_resumo %>% dcast(CLUSTER_MES.x~CLUSTER_MES.y, value.var = "n")
+
+
