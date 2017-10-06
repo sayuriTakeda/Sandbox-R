@@ -1,0 +1,3 @@
+date_min <- as.POSIXlt(as.Date(floor_date(floor_date(floor_date(today(), "month")-1, "month")-1,"month")))
+date_min$year <- date_min$year-1   # tem que fazer as.POSIXlt antes para conseguir isso
+int.min <- as.Date(date_min) 
