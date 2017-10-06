@@ -1,14 +1,12 @@
-setwd("/srv/shiny-server/apps/pre_top_wape/")
+# map_df
 
-library(glue)
-library(dplyr)
-library(magrittr)
-source("/home/--------------/minhas_funcoes.R")
+## listar os arquivos na pasta
+arquivos <- sort(dir("data/02-agg_cupom/", full.names = TRUE, pattern = "[0-9]{4}-[0-9]{2}-[0-9]{2}"))
+ind.arquivos <- (length(arquivos)-11):(length(arquivos)) 
+arquivos <- arquivos[ind.arquivos]
 
-sem <- semana_atual(FALSE)
-dat <- glue("s{sem}")
 
-# listar os arquivos na pasta
+## listar os arquivos na pasta
 arquivos <- dir("data", full.names = TRUE, pattern = "*.csv")
 arquivos <- sort(arquivos)
 # extrair semana do nome do arquivo
@@ -25,4 +23,3 @@ ler_arquivo <- function(file) {
 
 df <- arquivos %>% purrr::map_df(ler_arquivo)
 
-write.csv(df, "---------------.csv" , row.names = FALSE)
