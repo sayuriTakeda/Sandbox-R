@@ -1,0 +1,3 @@
+# salvar arquivo 
+df.cupom$DAT_OPERACAO_FISCAL %<>% as.POSIXct() # foi para transformar em formato date (o sql antigo não aceita o formato date “original” do R) 
+dbWriteTable(con, name = "TB_CRM_AGG_CUPOM", value = df.cupom, append = TRUE) # olhar se a conexão está certa mesmo
