@@ -1,0 +1,5 @@
+# Para encontrar perc (linhas ou colunas) na matrix/dataframe
+
+x <- tab_migracao_mes_mes
+x[is.na(x)] <- 0
+sweep(x[,-1], 1, rowSums(x[,-1]), FUN="/")
