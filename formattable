@@ -1,0 +1,27 @@
+# para encontrar a porcentagem das linhas
+x <- tab_migracao_mes_mes
+para_guardar <- x[,1]
+
+x[is.na(x)] <- 0
+x <- sweep(x[,-1], 1, rowSums(x[,-1]), FUN="/")
+x %<>% round(digits = 2) 
+
+x %<>% cbind(para_guardar) 
+x %<>% select(Cluster = CLUSTER_MES.y, "novos clientes" = clientes_novos, 
+              "descompromissado A" = descompromissado_A, "descompromissado B" = descompromissado_B, 
+              fieis, "potenciais A" = potenciais_A, "potenciais B" = potenciais_B, 
+              "sem cluster" = `Sem cluster`, valiosos)
+
+formattable(x, list(
+  #'novos clientes' = formatter("span", style = x ~ ifelse(x!=0, style(color = "#cc0099", font.weight = "bold"), NA)),
+  'novos clientes' = color_tile("white", "orange"),
+  'descompromissado A' = color_tile("white", "orange"),
+  'descompromissado B' = color_tile("white", "orange"),
+  'fieis' = color_tile("white", "orange"),
+  'potenciais A' = color_tile("white", "orange"),
+  'potenciais B' = color_tile("white", "orange"),
+  'sem cluster' = color_tile("white", "orange"),
+  'valiosos' = color_tile("white", "orange"),
+  'Cluster' = formatter("Cluster", style = x ~ style(color = "#1a1a00", font.weight = "bold"))
+))
+
