@@ -1,0 +1,25 @@
+sketch = htmltools::withTags(table(
+  tableHeader(c('Cluster', 'valor mês-2', 'valor mês-1', 'variação valor %')),
+  tableFooter(c("Total", 
+                para_inserir[1] %>% formatC(big.mark = ".", decimal.mark = ",", format = "f", digits = 0),
+                para_inserir[2] %>% formatC(big.mark = ".", decimal.mark = ",", format = "f", digits = 0),
+                para_inserir[3]
+  ))
+))
+
+datatable(container = sketch,
+tab_geral_mes_retrasado_passado_cluster %>% 
+                  select(Cluster, valor_total_retrasado, valor_total_passado, var_val_total_perc) %>% 
+                  arrange(desc(var_val_total_perc)) %>% 
+                  rename('valor mês-2' = valor_total_retrasado, 'valor mês-1' = valor_total_passado, 'variação valor %' = var_val_total_perc), 
+                rownames = F, 
+                # options para colorir o head com css
+                options = list(dom = 't', initComplete = JS("function(settings, json) {",
+                                                            "$(this.api().table().header()).css({'background-color': '#3c8dbc', 'color': '#fff'});",
+                                                            "}"))) %>% formatStyle(
+                                                              ('variação valor %'),
+                                                              background = styleColorBar((tab_geral_mes_retrasado_passado_cluster$var_val_total_perc), '#c2d1f0'),
+                                                              backgroundSize = '100% 90%',
+                                                              backgroundRepeat = 'no-repeat',
+                                                              backgroundPosition = 'center'
+                                                            )
