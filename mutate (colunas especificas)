@@ -6,3 +6,7 @@ tab_geral[2:10] %<>% as_tibble() %>% mutate_if(is.character, as.numeric)
 # mutate_at
 tab_migracao_mes_mes %>% 
   mutate_at(vars(-CLUSTER_MES.y), max)
+
+# mutate_at
+tab_migracao_mes_mes %>% 
+mutate_at(vars(-CLUSTER_MES.y), ~formatC(., big.mark = ".", decimal.mark = ",", format = "f", digits = 0))
