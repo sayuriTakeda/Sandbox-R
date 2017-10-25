@@ -1,0 +1,8 @@
+# para alterar colunas especificas na tabela
+
+# mutate__if
+tab_geral[2:10] %<>% as_tibble() %>% mutate_if(is.character, as.numeric)
+
+# mutate_at
+tab_migracao_mes_mes %>% 
+  mutate_at(vars(-CLUSTER_MES.y), max)
