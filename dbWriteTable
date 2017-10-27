@@ -1,0 +1,2 @@
+Para escrever no SQL 
+dbWriteTable(con, name = "TB_CRM_AGG_CUPOM", value = df.cupom, append = TRUE) 
