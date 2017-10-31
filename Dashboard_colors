@@ -1,0 +1,54 @@
+# Dashboard colors
+
+dashboardBody(
+    tags$head(tags$style(HTML('
+                              /* logo */
+                              .skin-blue .main-header .logo {
+                              background-color: #336699;
+                              }
+                              
+                              /* logo when hovered */
+                              .skin-blue .main-header .logo:hover {
+                              background-color: #336699;
+                              }
+                              
+                              /* navbar (rest of the header) */
+                              .skin-blue .main-header .navbar {
+                              background-color: #336699;
+                              }  
+                              /* main sidebar */
+                              .skin-blue .main-sidebar {
+                              background-color: #222d32;
+                              }
+                              
+                              /* active selected tab in the sidebarmenu */
+                              .skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+                              background-color: #222d32;
+                              }
+                              
+                              /* other links in the sidebarmenu */
+                              .skin-blue .main-sidebar .sidebar .sidebar-menu a{
+                              background-color: #222d32;
+                              color: #ffffff;
+                              }
+                              
+                              /* other links in the sidebarmenu when hovered */
+                              .skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+                              background-color: #336699;
+                              }
+                              /* toggle button when hovered  */                    
+                              .skin-blue .main-header .navbar .sidebar-toggle:hover{
+                              background-color: #336699;
+                              }
+                              /* para alterar o dashboardHeader */
+                              .main-header .logo {
+                              font-family: "Georgia", Times, "Times New Roman", serif;
+                              font-weight: bold;
+                              font-size: 17px;
+                              }
+                              
+                              '))), 
+                               
+                              ####### dashboardBody (tabItems) #######
+                              
+                              )
