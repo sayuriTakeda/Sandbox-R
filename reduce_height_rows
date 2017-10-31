@@ -1,0 +1,20 @@
+# reduce the height of the rows in dataTableOutput Shiny
+
+ex:
+
+# em ui 
+
+tabItems(
+      tabItem(tabName = "gm_cat",
+              box("Tabela GM", width = 12, dataTableOutput("tab1"), 
+              tags$head(tags$style(type="text/css", HTML("#tab1 {line-height:93%;}")))),
+              tabsetPanel(
+                tabPanel("Negativos",box(width = 13, dataTableOutput("tab_neg"))),
+                tabPanel("Positivos",box(width = 13, dataTableOutput("tab_pos"))))
+      ),
+      
+# parte que altera:
+tags$head(tags$style(type="text/css", HTML("#tab1 {line-height:93%;}")))
+
+# para alterar somente a tabela (tirando o header)
+tags$head(tags$style(type="text/css", HTML("#tab1 td {line-height:93%;}"))) #inserir td
