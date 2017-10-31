@@ -6,10 +6,10 @@ library(magrittr)
 base <- iris 
 mutate(base,feito = "n")
 
-# pode descomentar o shinythemes::themeSelector() para escolher
+# shinythemes::themeSelector() para escolher
 shinyApp(
   ui = tagList(
-    #shinythemes::themeSelector(), 
+    shinythemes::themeSelector(), 
     navbarPage(
       theme = shinytheme("flatly"),
       "Analistas",
