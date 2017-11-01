@@ -1,0 +1,4 @@
+iris %>% 
+  mutate(Sepal.Length =  Sepal.Length * 1e7) %>% 
+  datatable() %>% 
+  formatCurrency("Sepal.Length", currency = "", mark = ".", dec.mark = ",")
