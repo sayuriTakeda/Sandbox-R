@@ -1,0 +1,38 @@
+sketch_df_gm = htmltools::withTags(table(
+  class = 'display',   # cell-border
+  thead(
+    tr(
+      th(colspan = 1, '', style = 'background-color:#19334d;'),
+      th(colspan = 4, 'Cupons'),
+      th(colspan = 3, 'Ticket Médio', style = 'background-color:#19334d;'),
+      th(colspan = 3, 'Representatividade')
+    ),
+    tr(
+      lapply(c("GM", "Ano-1", "Atual", "Variação", 
+               "Var(%)", "Ano-1", "Ano atual", 
+               "Variação (%)", "Ano-1 (%)",  
+               "Ano atual (%)", "Variação"), th)
+    ),
+    tableFooter(c(para_concat_gm[1,],"","",""))
+  )
+))
+
+#print(sketch_df_gm)
+
+
+#df_gm %<>% arrange(desc(`var(qtd)`))
+datatable(df_gm, rownames = F, escape = FALSE,
+          container = sketch_df_gm,
+          options = list(scrollX = TRUE, dom = 't', columnDefs = list(list(className = 'dt-center', 
+                                                                           targets = 1:10)),
+                         initComplete = JS("function(settings, json) {",
+                                           "$(this.api().table().header()).css",
+                                           "({'background-color': '#336699', ",
+                                           "'color': '#fff'});}"))) %>% 
+  formatCurrency(c("CUPONS_2016", "CUPONS_2017", "var(qtd)"), 
+                 currency = "", mark = ".", dec.mark = ",", digits = 0) %>%
+  formatCurrency(c("var(%)", "ticket_medio_ano_menos_1", "ticket_medio_ano_atual", 
+                   "var(ticket_medio)", "ano_menos_1_repr(%)", "ano_atual_repr(%)", "var_repr(%)"), 
+                 currency = "", mark = ".", dec.mark = ",", digits = 2) %>% 
+  formatStyle(c('var(qtd)', 'var_repr(%)', 'var(ticket_medio)'), color =  styleInterval(0, c("#ff531a", "#00b33c")))
+
