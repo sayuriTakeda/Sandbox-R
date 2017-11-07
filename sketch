@@ -1,0 +1,14 @@
+sketch = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(colspan = 2, 'teste1'),
+      th(colspan = 2, 'teste4')
+    ),
+    tr(
+      lapply(c("GM", "Cupons ano-1", "Cupons atual", "Variação Cupons"), th)
+    ),
+    tableFooter(c("aaa","aaa","aaa","aaa"))
+  )
+))
+datatable(iris[1:20, c(5, 1:4)], container = sketch, rownames = FALSE)
