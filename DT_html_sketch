@@ -35,4 +35,3 @@ datatable(df_gm, rownames = F, escape = FALSE,
                    "var(ticket_medio)", "ano_menos_1_repr(%)", "ano_atual_repr(%)", "var_repr(%)"), 
                  currency = "", mark = ".", dec.mark = ",", digits = 2) %>% 
   formatStyle(c('var(qtd)', 'var_repr(%)', 'var(ticket_medio)'), color =  styleInterval(0, c("#ff531a", "#00b33c")))
-
