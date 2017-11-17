@@ -6,3 +6,5 @@ substring(a, regexpr(":", a) + 1)
 iris[grep("osa", iris$Species), ]
 iris %>% filter(str_detect(Species, "osa"))
 
+nom_sku <- "chocolate 150g garoto"
+str_extract(nom_sku, "[\\d]+g")
