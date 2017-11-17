@@ -1,0 +1,20 @@
+#library
+library(igraph)
+set.seed(10)
+
+# Create data
+data=matrix(sample(0:2, 25, replace=TRUE), nrow=5)
+colnames(data)=rownames(data)=LETTERS[1:5]
+
+# Tell Igraph it is an adjency matrix... with default parameters
+set.seed(10)
+network=graph_from_adjacency_matrix(data)
+
+# plot it
+plot(network,vertex.size=30, vertex.color= "#6699cc", 
+     vertex.frame.color="#ffffff", edge.color="#264d73", edge.arrow.size=0.5)
+
+### para deixar circular
+l <- layout_in_circle(network)
+plot(network, layout=l, ,vertex.size=30, vertex.color= "#6699cc", 
+     vertex.frame.color="#ffffff", edge.color="#264d73", edge.arrow.size=0.5)
