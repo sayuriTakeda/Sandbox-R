@@ -1,0 +1,8 @@
+a <- "sssss:brssss"
+sub(".*:", "", a)
+substring(a,7)
+substring(a, regexpr(":", a) + 1)
+
+iris[grep("osa", iris$Species), ]
+iris %>% filter(str_detect(Species, "osa"))
+
