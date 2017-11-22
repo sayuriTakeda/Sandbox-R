@@ -1,0 +1,72 @@
+library(tweenr)
+library(gganimate)
+library("gapminder") # base utilizada
+
+
+#### Exemplo de como a base é gerada 
+
+data <- data.frame(
+  x = c(1, 2, 2, 1, 2, 2),
+  y = c(1, 2, 2, 2, 1, 1),
+  time = c(1, 4, 10, 4, 8, 10),
+  group = c(1, 1, 1, 2, 2, 2),
+  ease = rep('cubic-in-out', 6)
+)
+
+data <- tween_elements(data, 'time', 'group', 'ease', nframes = 100)
+
+# plota (grupo 1 não se move com o grupo 2)
+
+p2 <- ggplot(data,
+             aes(x=x, y=y, frame = .frame)) +
+  geom_point(aes(color=.group),alpha=0.8) +
+  xlab("x") +
+  ylab("y") +
+  scale_x_log10(labels=comma)
+
+gganimate(p2, filename="gapminder-tween.gif", title_frame = FALSE, interval = 0.05)
+
+#### Exemplo com base gapminder
+
+gapminder_edit <- gapminder %>%
+  arrange(country, year) %>%
+  select(gdpPercap,lifeExp,year,country, continent, pop) %>%
+  rename(x=gdpPercap,y=lifeExp,time=year,id=country) %>%
+  mutate(ease="linear")
+
+gapminder_tween <- tween_elements(gapminder_edit,
+                                  "time", "id", "ease", nframes = 300) %>%
+  mutate(year = round(time), country = .group) %>%
+  left_join(gapminder, by=c("country","year","continent")) %>%
+  rename(population = pop.x)
+
+p2 <- ggplot(gapminder_tween,
+             aes(x=x, y=y, frame = .frame)) +
+  geom_point(aes(size=population, color=continent),alpha=0.8) +
+  xlab("GDP per capita") +
+  ylab("Life expectancy at birth") +
+  scale_x_log10(labels=comma)
+
+gganimate(p2, filename="gapminder-tween.gif", title_frame = FALSE, interval = 0.05)
+
+
+#### Com a base de dados 
+base_mantiveram_tornaram_fieis <-  read.csv("tabelas_para_shiny/base_mantiveram_tornaram_fieis.csv")
+base_mantiveram_tornaram_fieis$datas %<>% as.Date() 
+base_mantiveram_tornaram_fieis$tempo <- seq(1:13)
+base_mantiveram_tornaram_fieis$ease <- 'linear' 
+group = c(1, 1, 1, 2,2,2,2,2,2,2,2,2,2)
+tempo = c(1, 2, 3, 1,2,3,4,5,6,7,8,9,10)
+base_mantiveram_tornaram_fieis$group <- group
+data <- tween_elements(base_mantiveram_tornaram_fieis,'tempo', 'group', 'ease', nframes = 200)
+
+p2 <- ggplot(data,
+             aes(x=mantiveram, y=tornaram, frame = .frame)) +
+  geom_point(aes(group = .group, colour = .group),alpha=0.8) +
+  xlab("") +
+  ylab("") +
+  scale_x_log10(labels=comma)
+
+p2
+
+gganimate(p2, filename="gapminder-tween.gif", title_frame = FALSE, interval = 0.1)
