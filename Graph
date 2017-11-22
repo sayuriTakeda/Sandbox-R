@@ -1,0 +1,48 @@
+#library
+library(igraph)
+set.seed(10)
+
+# Create data
+data=matrix(sample(0:2, 25, replace=TRUE), nrow=5)
+colnames(data)=rownames(data)=LETTERS[1:5]
+
+# Tell Igraph it is an adjency matrix... with default parameters
+set.seed(10)
+network=graph_from_adjacency_matrix(data)
+
+# plot it
+plot(network,vertex.size=30, vertex.color= "#6699cc", 
+     vertex.frame.color="#ffffff", edge.color="#264d73", edge.arrow.size=0.5)
+
+### para circular
+l <- layout_in_circle(network)
+plot(network, layout=l, ,vertex.size=30, vertex.color= "#6699cc", 
+     vertex.frame.color="#ffffff", edge.color="#264d73", edge.arrow.size=0.5) 
+
+
+
+
+######## com outra base de dados
+
+library(dplyr)
+tab_migracao_mes_mes <- read_feather("tabelas_para_shiny/tab_migracao_mes_mes.feather")
+tab_migracao_mes_mes[is.na(tab_migracao_mes_mes)] <- 0
+
+linhas <- colnames(tab_migracao_mes_mes)
+linhas <- linhas[2:9]
+
+tab_migracao_mes_mes <- tab_migracao_mes_mes[,2:9]
+tab_migracao_mes_mes <- as.matrix(tab_migracao_mes_mes, replace=TRUE)
+rownames(tab_migracao_mes_mes) = colnames(tab_migracao_mes_mes) = linhas
+
+class(tab_migracao_mes_mes)
+tab_migracao_mes_mes
+
+require(igraph)
+g <- graph.adjacency(tab_migracao_mes_mes, mode="directed", weighted=TRUE, diag=TRUE)
+
+get.adjacency(g)
+#shortest.paths(g, mode="out")
+
+plot(g,vertex.size=30, vertex.color= "#6699cc", 
+     vertex.frame.color="#ffffff", edge.color="#264d73", edge.arrow.size=0.5)
