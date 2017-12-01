@@ -1,0 +1,17 @@
+guardar_tabela <- formattable(tab_qtd_cluster_cat, list(qtd = color_tile("#ffffcc", "#b3b300")))
+
+## função que guarda o formattable em png
+export_formattable <- function(f, file, width = "80%", height = NULL, 
+                               background = "white", delay = 0.2)
+{
+  w <- as.htmlwidget(f, width = width, height = height)
+  path <- html_print(w, background = background, viewer = NULL)
+  url <- paste0("file:///", gsub("\\\\", "/", normalizePath(path)))
+  webshot(url,
+          file = file,
+          selector = ".formattable_widget",
+          delay = delay)
+}
+
+## guardar
+export_formattable(guardar_tabela, "/home/--------------/teste.png", width = 250)
