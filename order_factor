@@ -1,0 +1,6 @@
+dados_cluster %>%
+  mutate(cluster = factor(cluster, levels = seq_along(cluster))) %>% 
+  mutate(cluster = fct_reorder(cluster, qtd, .desc = TRUE)) %>%
+  ggplot(aes(x = cluster,  y = qtd)) + 
+  geom_col(fill = "#002266") +
+  labs(x = "Cluster", y = "dissimilaridade")
