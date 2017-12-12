@@ -1,6 +1,8 @@
 # Renaming levels of a factor
-b$semana %<>% as.factor() 
-b$semana <- factor(b$semana, c(....)
+# depois de ordenar a tabela (rev serve para fazer o contrário)
+teste <- tab_fil_agregada_graphic$NOM_GM 
+# o level será a ordem do vetor teste 
+tab_fil_agregada_graphic$NOM_GM <- factor(tab_fil_agregada_graphic$NOM_GM, levels = teste)
 
 # Criar coluna com primeiro nome e outra com o restante
 extract(tabela_estoque, NOM_GM, c("FirstName", "LastName"), "([^ ]+) (.*)")
