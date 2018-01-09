@@ -1,0 +1,17 @@
+# Remover duplicatas em tabelas como correlação ou apriori (A -> B e B -> A) 
+
+tab_correlacao <- read_feather("__________")
+
+## metodo cbind
+
+concat_strings <- function(a, b){
+  x <- sort(c(a, b))
+  paste0(x, collapse = "_")
+}
+
+tab_correlacao$chave <- map2_chr(tab_correlacao$sku1, tab_correlacao$sku2, concat_strings)
+
+tab_correlacao <- distinct(tab_correlacao, chave, .keep_all = TRUE) 
+
+tab_correlacao <- tab_correlacao[,1:3]
+
