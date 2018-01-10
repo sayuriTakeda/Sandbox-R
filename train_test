@@ -2,3 +2,34 @@ set.seed(489)
 ind <- sample(1:nrow(x), nrow(x)/2, replace = FALSE)
 train <- x[ind, ]
 test <- x[-ind, ]
+
+#### teste ####
+swiss <- datasets::swiss
+x <- model.matrix(Fertility~., swiss)[,-1] # transforma em matriz e tirar fertility
+y <- swiss$Fertility
+lambda <- 10^seq(10, -2, length = 100) # não sei pq fez 100 (matriz tem 49)
+# modelo
+swisslm <- lm(Fertility~., data = swiss)
+coef(swisslm)
+summary(swisslm)
+# ridge
+ridge.mod <- glmnet(x, y, alpha = 0, lambda = lambda)
+predict(ridge.mod, s = 0, type = 'coefficients')
+summary(ridge.mod)
+# dividir em treino e teste
+set.seed(489)
+train = sample(1:nrow(x), nrow(x)/2)
+test = (-train)
+ytest = y[test]
+# rodar sem o lambda e com lambda.min para testar o erro  
+swisslm <- lm(Fertility~., data = swiss, subset = train)
+s.pred <- predict(swisslm, newdata = swiss[test,])
+mean((s.pred-ytest)^2) # o erro para uma regressão normal
+
+ridge.mod <- glmnet(x[train,], y[train], alpha = 0, lambda = lambda)
+cv.out <- cv.glmnet(x[train, ], y[train], alpha = 0) # para achar o melhor lamb
+cv.out$lambda.min # esse será o lamb
+bestlam <- cv.out$lambda.min
+ridge.pred <- predict(ridge.mod, s = bestlam, newx = x[test,])
+#ridge.pred <- predict(ridge.mod, s = 0, newx = x[test,])
+mean((ridge.pred-ytest)^2) # o erro para regressão com ridge (regularização) e melhor lambda 
