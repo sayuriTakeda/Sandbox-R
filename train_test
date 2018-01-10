@@ -1,0 +1,4 @@
+set.seed(489)
+ind <- sample(1:nrow(x), nrow(x)/2, replace = FALSE)
+train <- x[ind, ]
+test <- x[-ind, ]
