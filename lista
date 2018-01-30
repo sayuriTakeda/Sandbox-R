@@ -1,0 +1,10 @@
+skus <- as.numeric(sort(unique(base_matriz$COD_SKU)))
+lista <- lapply(X = skus, FUN = function(NEG_i) filter(.data = base_matriz, 
+                                                       COD_SKU == NEG_i))
+base_completa <- data_frame()
+
+for (i in 1:length(skus)) {
+  base <- lista[[i]]
+  ......
+  base_completa <- rbind(base_completa, base)
+}
