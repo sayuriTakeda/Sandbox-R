@@ -1,0 +1,15 @@
+# com for
+base_for <- data.frame()
+for (i in 1:10) {
+  for (j in 1:10) {
+    linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
+    base_for <- rbind(base_for, linha)
+  }
+}
+
+# fazer a mesma coisa com foreach
+base_foreach = foreach(i = 1:10, .combine = rbind) %do% {
+  foreach(j = 1:10, .combine = rbind) %do% {
+  linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
+  }
+}
