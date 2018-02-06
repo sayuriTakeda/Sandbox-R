@@ -1,22 +1,29 @@
 # com for
+ptm <- proc.time()
 base_for <- data.frame()
-for (i in 1:10) {
-  for (j in 1:10) {
+for (i in 1:200) {
+  for (j in 1:100) {
     linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
     base_for <- rbind(base_for, linha)
   }
 }
+tempo_for <- proc.time() - ptm
 
 # fazer a mesma coisa com foreach
-base_foreach = foreach(i = 1:10, .combine = rbind) %do% {
-  foreach(j = 1:10, .combine = rbind) %do% {
-  linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
-  }
-}
-
-# %dopar%
-base_foreach = foreach(i = 1:10, .combine = rbind) %do% {
-  foreach(j = 1:10, .combine = rbind) %dopar% {
+ptm <- proc.time()
+base_foreach_do = foreach(i = 1:200, .combine = rbind) %do% {
+  foreach(j = 1:100, .combine = rbind) %do% {
     linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
   }
 }
+tempo_do <- proc.time() - ptm
+
+
+# fazer a mesma coisa com foreach %dopar%
+ptm <- proc.time()
+base_foreach_dopar = foreach(i = 1:200, .combine = rbind) %do% {
+  foreach(j = 1:100, .combine = rbind) %dopar% {
+    linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
+  }
+}
+tempo_dopar <- proc.time() - ptm
