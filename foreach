@@ -13,3 +13,10 @@ base_foreach = foreach(i = 1:10, .combine = rbind) %do% {
   linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
   }
 }
+
+# %dopar%
+base_foreach = foreach(i = 1:10, .combine = rbind) %do% {
+  foreach(j = 1:10, .combine = rbind) %dopar% {
+    linha <- data.frame(Nome = "nome", Valor = sqrt(i)/j)
+  }
+}
