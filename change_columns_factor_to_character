@@ -1,0 +1,10 @@
+base <- iris
+
+x <- base
+for(i in 1:ncol(x)) {
+    if(is.factor(x[,i]) == TRUE) {
+    x[,i] %<>% as.character() 
+  }
+}
+
+str(x)
