@@ -1,0 +1,17 @@
+library(reticulate)
+library(dplyr)
+library(magrittr)
+
+np <- import("numpy")
+
+data <- iris
+class(data)
+data_2 <- r_to_py(iris)
+class(data_2)
+
+py_module_available("numpy")
+
+rnorm(10) %>% 
+  np$abs() %>% 
+  np$cumproduct() %>% 
+  plot()
