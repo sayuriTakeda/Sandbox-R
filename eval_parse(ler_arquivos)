@@ -1,0 +1,18 @@
+vector <- c(
+  "df_ventilador", "df_lampada", 
+  "df_liquidificador", "df_cxacustica"
+)
+
+for (i in 1:length(vector)) {
+  #Carrega bases Rda
+  base <- eval(
+    parse(
+      text=paste0(
+        "readRDS('data/bases_por_negocio/",vector[i],".Rda')"
+      )
+    )
+  )
+  
+  ...
+  
+  }
