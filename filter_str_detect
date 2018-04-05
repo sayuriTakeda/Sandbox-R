@@ -1,0 +1,4 @@
+base_completa %>%
+    filter(
+        str_detect(NOME_ATRIBUTO, "df.ventilador.pba")
+    )
