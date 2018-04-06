@@ -1,0 +1,15 @@
+teste <- iris
+
+nomes <- names(Filter(is.factor, teste)) # nomes de todas as colunas factor
+tabela <- Filter(is.factor, teste) # todas as colunas factor
+
+nomes[1] # retorna apenas o nome
+tabela[1] # retorna a coluna inteira
+
+a <- teste %>% 
+  group_by(eval(parse(text = tabela[1]))) %>% 
+  summarise(soma = sum(Sepal.Length)) # agrupa a primeira coluna encontrada como factor
+  
+colnames(a)[1] <- nomes[1] # renomeia 
+
+assign(paste('tabela.',tolower(nomes[1]),sep=''), a) # cria dataframe tabela.nome_da_coluna
