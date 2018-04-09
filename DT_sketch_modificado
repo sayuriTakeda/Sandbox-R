@@ -1,0 +1,30 @@
+#DT com sketch modificado
+
+sketch = htmltools::withTags(table(
+  class = 'display',
+  thead(
+    tr(
+      th(colspan = 4, 'CORRELAÇÕES ANO INTEIRO')
+    ),
+    tr(
+      th(colspan = 1, 'ATRIBUTO'),
+      th(colspan = 1, 'R'),
+      th(colspan = 1, 'CORRELAÇÃO'),
+      th(colspan = 1, 'NOME')
+    )
+  )
+))
+print(sketch)
+
+datatable(ano_correl,container = sketch, rownames = F, 
+          filter = 'top', 
+          options = list(
+            pageLength = 10, dom = 'tip',
+            columnDefs = list(list(className = 'dt-center', targets = 1:3)),
+            initComplete = JS(
+              "function(settings, json) {",
+              "$(this.api().table().header()).css({'background-color': '#1f1f7a', 'color': '#fff'});",
+              "}")
+          )) %>% formatRound("CORRELAÇÃO", 3)
+
+
