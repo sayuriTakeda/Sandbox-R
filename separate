@@ -1,0 +1,1 @@
+separate(VALOR,c("OBJETO_A","OBJETO_B"),sep="\\/")
