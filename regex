@@ -1,0 +1,4 @@
+lista todas as bases com o regex correspondente
+ls(pattern=regex("df.[a-z]+\\.pba"))
+# para fazer grupos 
+ls(pattern=regex("(df.[a-z]+){1}")) # pega 1 vez df.alguma_coisa
