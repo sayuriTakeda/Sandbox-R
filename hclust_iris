@@ -1,0 +1,6 @@
+base_ventilador <- iris[,-5]
+objetos <- iris[,5]
+
+hc_vent <- hclust(dist(base_ventilador), method = 'ward')
+
+dendograma_output_cluster <- plclust(hc_vent, labels=objetos, ylab='distancia')
