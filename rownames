@@ -1,0 +1,6 @@
+# para inserir rownames
+base <- data.frame(base[,-1], row.names = base[,1])
+
+# outra maneira 
+resultado <- base[-1]
+row.names(resultado) <- base$PBA
