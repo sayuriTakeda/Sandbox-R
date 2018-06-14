@@ -1,0 +1,7 @@
+dados %>% 
+  mutate(PCT_QTD = QTD/sum(QTD),
+         PCT_TPV = TPV/sum(TPV)) %>% 
+  datatable(rownames = F,
+            options = list(pageLength=20, bInfo = FALSE, bPaginate=FALSE, bFilter=FALSE)) %>% 
+  formatPercentage(c(5,6),2) %>% 
+  formatCurrency(4,'R$', mark = '.', dec.mark = ',')
