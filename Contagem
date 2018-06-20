@@ -1,0 +1,31 @@
+library(dplyr)
+library(magrittr)
+library(tidyr)
+
+DATES <- c("01/01/2016", "01/02/2016", "01/03/2016", "01/04/2016", 
+           "01/05/2016", "01/06/2016", "01/07/2016", "01/08/2016", "01/09/2016")
+DATES <- as.Date(DATES, "%d/%m/%Y")
+
+QTD <- c(0,0,1,2,3,0,0,0,1) 
+
+base <- data.frame(DATES, QTD)
+
+base %<>% spread(DATES, QTD)
+
+condensed_Data <- function(inVector) {
+  count <- 0
+  outVector <- c()
+  for (i in 1:length(inVector)) {
+    if (i != 1) {
+      if ((inVector[i - 1] > 0 && inVector[i] == 0) || (inVector[i - 1] == 0 && inVector[i] > 0)){
+        outVector <- c(outVector, count)
+        count <- 0
+      }
+    }
+    count <- count + 1
+  }
+  outVector <- c(outVector, count)
+  return(outVector)
+}
+
+condensed_Data(base[1,])
