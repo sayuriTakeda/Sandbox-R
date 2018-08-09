@@ -1,0 +1,23 @@
+base_datas <- base_argentina %>% 
+  select((grep("LAST",names(.), value = TRUE)))
+
+base_datas %<>% cbind(
+  base_argentina %>% select((grep("FIRST",names(.), value = TRUE)))
+  )
+
+base_datas %<>% cbind(VAR_RESP = base_argentina$VAR_RESP)
+
+for (i in 1:(length(names(base_datas))-1)) {
+  a <- base_datas %>% 
+    group_by(datas = eval(parse(text = names(base_datas)[i]))) %>% 
+    summarise(soma_fraudes = sum(VAR_RESP)) %>% 
+    arrange(desc(soma_fraudes))
+  
+  print(
+  a %>% 
+    ggplot(aes(a$datas, a$soma_fraudes)) +
+    geom_point(colour = "#336699", size = 1) +
+    labs(x = "datas", y = "qtd fraudes", title = names(base_datas)[i])
+  )
+  
+} 
