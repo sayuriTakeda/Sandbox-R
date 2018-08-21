@@ -1,0 +1,2 @@
+base_argentina <- base_argentina[, -which(
+  names(base_argentina) %in% retirar)]
