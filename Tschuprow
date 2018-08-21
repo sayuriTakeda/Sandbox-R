@@ -1,0 +1,33 @@
+# H0:São independentes (Não associadas)
+# H1:Não são independentes (São associadas)
+
+base_chr <- base_argentina %>% 
+  dplyr::select(vetor, VAR_RESP) # vetor são as variáveis a serem analisadas
+
+base_chr <- base_argentina[,sapply(base_argentina, is.character)]
+
+base_chr <- base_chr[1:10000,]
+
+base_chr[is.na(base_chr)] <- "sem_valor"
+
+base_T <- data.frame(as.numeric())
+base_nome <- data.frame(as.numeric())
+
+for (i in 1:length(base_chr)) {
+  
+  base_T[nrow(base_T)+1,] <- round(DescTools::TschuprowT(
+         eval(parse(text = base_chr[i])),
+         eval(parse(text = base_chr[164]))),2)
+  
+  base_nome[nrow(base_nome)+1,] <- names(base_chr)[i]
+    
+}
+
+base_nome %<>% cbind(base_T)
+
+names(base_nome) <- c("VARIAVEL", "TSCHUPROW")
+
+# infinito é porque a variável não mudou 
+base_nome
+
+base_nome[base_nome$TSCHUPROW < 0.01,] # retirar
