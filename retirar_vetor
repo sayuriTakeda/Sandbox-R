@@ -1,2 +1,5 @@
-base_argentina <- base_argentina[, -which(
-  names(base_argentina) %in% retirar)]
+retirar <- base_chr %>% 
+  dplyr::select((grep("TRUE_IP",names(.), value = TRUE)))
+
+base_chr <- base_chr[, -which(
+  names(base_chr) %in% names(retirar))]
