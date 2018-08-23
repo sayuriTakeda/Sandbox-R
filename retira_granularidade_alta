@@ -1,0 +1,19 @@
+retirar <- data.frame(as.numeric())
+guardar <- data.frame(as.numeric())
+
+for (i in 1:length(base_chr)) {
+  if (length(unique(base_chr[,i])) > 20) {
+    retirar[nrow(retirar)+1,] <- names(base_chr[i])
+    print(
+      paste0(
+        names(base_chr[i]), ": ", length(unique(base_chr[,i]))
+        )
+      )
+  } else {
+    guardar[nrow(guardar)+1,] <- names(base_chr[i])
+  }}
+
+base_argentina <- base_argentina[, -which(
+  names(base_argentina) %in% retirar[,1])]
+
+paste0("Restaram ",ncol(base_argentina), " colunas.")
