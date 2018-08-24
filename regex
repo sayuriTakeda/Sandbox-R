@@ -5,3 +5,7 @@ ls(pattern=regex("(df.[a-z]+){1}")) # pega 1 vez df.alguma_coisa
 
 #pegar tudo apos _
 gsub("^.*_","",base_chr$NAM_MODULE)
+
+# pega apenas os números
+base_argentina %<>% 
+mutate(TMX_VARIABLES_MODIFICADO =  gsub('\\D+','', base_argentina$TMX_VARIABLES))
