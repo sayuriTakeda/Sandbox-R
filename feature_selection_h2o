@@ -1,0 +1,30 @@
+# RODAR H2O
+
+# TESTE FEATURE SELECTION COM RANDOM FOREST
+
+library(h2o)
+
+h2o.init(
+  nthreads=-1,            ## -1: use all available threads
+  max_mem_size = "2G")    ## specify the memory size for the H2O cloud
+
+h2o.removeAll() # Clean slate - just in case the cluster was already running
+
+base <- iris
+base <- as.h2o(base)
+
+splits <- h2o.splitFrame(base, c(0.8))
+train <- h2o.assign(splits[[1]], "train.hex")
+validation <- h2o.assign(splits[[2]], "validation.hex")
+
+modelo <- h2o.randomForest(x = 1:4, y = 5, 
+                          training_frame = train, 
+                          ntrees = 100,   #The default number of trees in an H2O Random Forest is 50
+                          model_id = "DRF", 
+                          ignore_const_cols = TRUE)
+
+summary(modelo)
+h2o.confusionMatrix(modelo)
+modelo@model$variable_importances
+
+rf_perf1 <- h2o.performance(modelo, validation)
