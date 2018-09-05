@@ -1,0 +1,24 @@
+# TESTE FEATURE SELECTION COM RANDOM FOREST
+
+data <- iris
+set.seed(71)
+iris.rf <- randomForest(Species ~ ., data=data, ntree = 500)
+print(iris.rf)
+round(importance(iris.rf), 2)
+# taxa de erro de 5.33% e Sepal.Width com menor importancia
+
+# retirando as variáveis menos importantes - Sepal.Width e Sepal.Length -> (OOB estimate of  error rate: 3.33%)
+data <- iris
+set.seed(71)
+data %<>% select(-Sepal.Width, -Sepal.Length)
+iris.rf <- randomForest(Species ~ ., data=data, ntree = 500)
+print(iris.rf)
+round(importance(iris.rf), 2)
+
+# retirando as variáveis mais importantes - Petal.Length e Petal.Width - > (OOB estimate of  error rate: 28%)
+data <- iris
+set.seed(71)
+data %<>% select(-Petal.Length, -Petal.Width)
+iris.rf <- randomForest(Species ~ ., data=data, ntree = 500)
+print(iris.rf)
+round(importance(iris.rf), 2)
