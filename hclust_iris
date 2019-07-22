@@ -1,6 +1,31 @@
-base_ventilador <- iris[,-5]
-objetos <- iris[,5]
+library(magrittr)
+library(dplyr)
+library(stats)
+library(cluster)
+library(dendextend)
 
-hc_vent <- hclust(dist(base_ventilador), method = 'ward')
+# chamar base
+base <- iris %>% select(-Species)
 
-dendograma_output_cluster <- plclust(hc_vent, labels=objetos, ylab='distancia')
+# criar dendograma
+hc <- hclust(dist(base))
+dend <- as.dendrogram(hc)
+
+plot(dend, main = "Cluster Dendrogram", sub = "",
+     xlab = "Valores", ylab = "Altura")
+
+k1 <- 3
+base_clusters <- cutree(dend, k = k1)[order.dendrogram(dend)] 
+base_clusters %<>% as.data.frame() 
+names(base_clusters) <- "valores"
+
+base_clusters %>% 
+  group_by(cluster = valores) %>% 
+  summarise(n = n())
+
+# plot
+dend1 <- color_branches(dend, k = 3)
+dend1 <- color_labels(dend1, k = 3)
+plot(dend1, main = "Cluster Dendrogram", sub = "",
+     xlab = "Valores", ylab = "Altura")
+
