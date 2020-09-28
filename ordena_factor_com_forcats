@@ -1,0 +1,4 @@
+library(forcats)
+
+tabela$categoria_produto <- 
+  fct_infreq(f = tabela$categoria_produto) # ordena pela frequencia
